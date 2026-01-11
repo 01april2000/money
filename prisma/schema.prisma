@@ -21,6 +21,27 @@ enum Role {
   SANTRI
 }
 
+enum JenisTransaksi {
+  SPP
+  SYAHRIAH
+  UANG_SAKU
+  LAUNDRY
+}
+
+enum StatusTransaksi {
+  LUNAS
+  PENDING
+  BELUM_BAYAR
+  DITOLAK
+}
+
+enum StatusSantri {
+  AKTIF
+  NON_AKTIF
+  LULUS
+  KELUAR
+}
+
 model User {
   id            String    @id
   name          String
@@ -32,6 +53,7 @@ model User {
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
   accounts      Account[]
+  santri        Santri?
 
   @@unique([email])
   @@map("user")
@@ -83,4 +105,46 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+model Santri {
+  id          String           @id @default(cuid())
+  nis         String           @unique
+  nama        String
+  kelas       String
+  asrama      String
+  wali        String
+  status      StatusSantri     @default(AKTIF)
+  userId      String?          @unique
+  user        User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  transaksi   Transaksi[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([kelas])
+  @@index([asrama])
+  @@index([status])
+  @@map("santri")
+}
+
+model Transaksi {
+  id              String          @id @default(cuid())
+  kode            String          @unique
+  santriId        String
+  santri          Santri          @relation(fields: [santriId], references: [id], onDelete: Cascade)
+  jenis           JenisTransaksi
+  bulan           String?
+  jumlah          Int
+  tanggalBayar    DateTime?
+  status          StatusTransaksi @default(BELUM_BAYAR)
+  jenisLaundry    String?
+  keterangan      String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([santriId])
+  @@index([jenis])
+  @@index([status])
+  @@index([createdAt])
+  @@map("transaksi")
 }
