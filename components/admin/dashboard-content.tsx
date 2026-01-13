@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import * as XLSX from "xlsx"
 import { toast } from "sonner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -32,7 +33,9 @@ import {
   Wallet,
   CheckCircle,
   Clock,
-  XCircle
+  XCircle,
+  Upload,
+  Download
 } from "lucide-react"
 
 interface DashboardContentProps {
@@ -67,6 +70,7 @@ interface DashboardContentProps {
       asrama: string
       wali: string
       status: string
+      email: string
     }>
     sppTransactions?: Array<{
       id: string
@@ -340,7 +344,8 @@ function DashboardHome({ dashboardData }: { dashboardData?: DashboardContentProp
 
 // User Management
 function UserManagement({ dashboardData }: { dashboardData?: DashboardContentProps["dashboardData"] }) {
-  const users = dashboardData?.users || []
+  const initialUsers = dashboardData?.users || []
+  const [users, setUsers] = React.useState(initialUsers)
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
@@ -388,19 +393,16 @@ function UserManagement({ dashboardData }: { dashboardData?: DashboardContentPro
         body: JSON.stringify(formData),
       })
 
-      const data = await response.json()
+      const newUser = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to create user")
+        throw new Error(newUser.error || "Failed to create user")
       }
 
       setSuccess("User berhasil ditambahkan!")
+      setUsers(prev => [newUser, ...prev])
       setFormData({ name: "", email: "", role: "SANTRI", password: "" })
-      
-      // Refresh the page to show the new user
-      setTimeout(() => {
-        window.location.reload()
-      }, 1000)
+      setIsAddDialogOpen(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Terjadi kesalahan")
     } finally {
@@ -424,9 +426,7 @@ function UserManagement({ dashboardData }: { dashboardData?: DashboardContentPro
       {
         loading: "Menghapus user...",
         success: () => {
-          setTimeout(() => {
-            window.location.reload()
-          }, 1000)
+          setUsers(prev => prev.filter(user => user.id !== userId))
           return "User berhasil dihapus!"
         },
         error: "Gagal menghapus user",
@@ -466,17 +466,15 @@ function UserManagement({ dashboardData }: { dashboardData?: DashboardContentPro
         }),
       })
 
-      const data = await response.json()
+      const updatedUser = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to update user")
+        throw new Error(updatedUser.error || "Failed to update user")
       }
 
+      setUsers(prev => prev.map(user => user.id === updatedUser.id ? updatedUser : user))
       toast.success("User berhasil diperbarui!")
       setIsEditDialogOpen(false)
-      setTimeout(() => {
-        window.location.reload()
-      }, 1000)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Terjadi kesalahan")
     } finally {
@@ -544,7 +542,6 @@ function UserManagement({ dashboardData }: { dashboardData?: DashboardContentPro
                     <option value="BENDAHARA_SMK">Bendahara SMK</option>
                     <option value="BENDAHARA_SMP">Bendahara SMP</option>
                     <option value="BENDAHARA_PONDOK">Bendahara Pondok</option>
-                    <option value="SANTRI">Santri</option>
                   </select>
                 </div>
                 <div className="grid gap-2">
@@ -715,7 +712,253 @@ function UserManagement({ dashboardData }: { dashboardData?: DashboardContentPro
 
 // Santri Management
 function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentProps["dashboardData"] }) {
-  const santri = dashboardData?.santri || []
+  const initialSantri = dashboardData?.santri || []
+  const [santri, setSantri] = React.useState(initialSantri)
+  const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false)
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [activeTab, setActiveTab] = React.useState<"manual" | "excel">("manual")
+  const [excelFile, setExcelFile] = React.useState<File | null>(null)
+  const [parsedData, setParsedData] = React.useState<any[]>([])
+  const [isUploading, setIsUploading] = React.useState(false)
+  const [formData, setFormData] = React.useState({
+    nis: "",
+    nama: "",
+    kelas: "",
+    asrama: "",
+    wali: "",
+    status: "AKTIF",
+    email: "",
+    password: "",
+  })
+  const [editFormData, setEditFormData] = React.useState({
+    id: "",
+    nis: "",
+    nama: "",
+    kelas: "",
+    asrama: "",
+    wali: "",
+    status: "AKTIF",
+    email: "",
+    password: "",
+  })
+  const [searchQuery, setSearchQuery] = React.useState("")
+
+  const filteredSantri = santri.filter(s =>
+    s.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    s.nis.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    s.kelas.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    s.asrama.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch("/api/santri", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      })
+
+      const newSantri = await response.json()
+
+      if (!response.ok) {
+        throw new Error(newSantri.error || "Failed to create santri")
+      }
+
+      toast.success("Santri berhasil ditambahkan!")
+      setSantri(prev => [newSantri, ...prev])
+      setFormData({ nis: "", nama: "", kelas: "", asrama: "", wali: "", status: "AKTIF", email: "", password: "" })
+      setIsAddDialogOpen(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Terjadi kesalahan")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDelete = async (santriId: string) => {
+    toast.promise(
+      async () => {
+        const response = await fetch(`/api/santri?id=${santriId}`, {
+          method: "DELETE",
+        })
+
+        if (!response.ok) {
+          throw new Error("Gagal menghapus santri")
+        }
+
+        return response.json()
+      },
+      {
+        loading: "Menghapus santri...",
+        success: () => {
+          setSantri(prev => prev.filter(s => s.id !== santriId))
+          return "Santri berhasil dihapus!"
+        },
+        error: "Gagal menghapus santri",
+      }
+    )
+  }
+
+  const handleEdit = (s: { id: string; nis: string; nama: string; kelas: string; asrama: string; wali: string; status: string; email?: string }) => {
+    setEditFormData({
+      id: s.id,
+      nis: s.nis,
+      nama: s.nama,
+      kelas: s.kelas,
+      asrama: s.asrama,
+      wali: s.wali,
+      status: s.status,
+      email: s.email || "",
+      password: "",
+    })
+    setIsEditDialogOpen(true)
+  }
+
+  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setEditFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch(`/api/santri?id=${editFormData.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(editFormData),
+      })
+
+      const updatedSantri = await response.json()
+
+      if (!response.ok) {
+        throw new Error(updatedSantri.error || "Failed to update santri")
+      }
+
+      setSantri(prev => prev.map(s => s.id === updatedSantri.id ? updatedSantri : s))
+      toast.success("Santri berhasil diperbarui!")
+      setIsEditDialogOpen(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Terjadi kesalahan")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Handle Excel file upload
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setExcelFile(file)
+      setIsUploading(true)
+      
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        try {
+          const data = event.target?.result
+          const workbook = XLSX.read(data, { type: "binary" })
+          const sheetName = workbook.SheetNames[0]
+          const sheet = workbook.Sheets[sheetName]
+          const jsonData = XLSX.utils.sheet_to_json(sheet)
+          
+          // Validate and transform data
+          const validData = jsonData.map((row: any) => ({
+            nis: String(row.nis || row.NIS || row["NIS"] || ""),
+            nama: String(row.nama || row.Nama || row["Nama"] || ""),
+            kelas: String(row.kelas || row.Kelas || row["Kelas"] || ""),
+            asrama: String(row.asrama || row["Nomer Kamar"] || row["Nomer_Kamar"] || row["NomerKamar"] || row.kamar || row.Kamar || row["Kamar"] || ""),
+            wali: String(row.wali || row.Wali || row["Wali"] || ""),
+            status: String(row.status || row.Status || row["Status"] || "AKTIF").toUpperCase(),
+            email: String(row.email || row.Email || row["Email"] || ""),
+            password: String(row.password || row.Password || row["Password"] || "123456"),
+          })).filter(item => item.nis && item.nama && item.kelas && item.asrama && item.wali && item.email)
+
+          setParsedData(validData)
+          setIsUploading(false)
+          toast.success(`Berhasil memuat ${validData.length} data santri`)
+        } catch (err) {
+          setIsUploading(false)
+          toast.error("Gagal membaca file Excel. Pastikan format file benar.")
+        }
+      }
+      reader.readAsBinaryString(file)
+    }
+  }
+
+  // Handle bulk import
+  const handleBulkImport = async () => {
+    if (parsedData.length === 0) {
+      toast.error("Tidak ada data untuk diimpor")
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const importResponse = await fetch("/api/santri", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          bulk: true,
+          santri: parsedData,
+        }),
+      })
+
+      const result = await importResponse.json()
+
+      if (!importResponse.ok) {
+        throw new Error(result.error || "Failed to import santri")
+      }
+
+      toast.success(`Berhasil mengimpor ${result.success} santri. ${result.failed} gagal.`)
+      // Refresh data by fetching from API
+      const refreshResponse = await fetch("/api/santri")
+      const allSantri = await refreshResponse.json()
+      setSantri(allSantri)
+      setParsedData([])
+      setExcelFile(null)
+      setIsAddDialogOpen(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Terjadi kesalahan")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Download Excel template
+  const downloadTemplate = () => {
+    const template = [
+      {
+        NIS: "12345",
+        Nama: "Contoh Nama Santri",
+        Kelas: "10A",
+        Nomer_Kamar: "A1",
+        Wali: "Nama Wali",
+        Status: "AKTIF",
+        Email: "contoh@email.com",
+        Password: "123456",
+      },
+    ]
+    const worksheet = XLSX.utils.json_to_sheet(template)
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Template")
+    XLSX.writeFile(workbook, "template_santri.xlsx")
+  }
 
   return (
     <div className="space-y-6">
@@ -724,10 +967,382 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
           <h1 className="text-3xl font-bold">Management Santri</h1>
           <p className="text-muted-foreground">Kelola data santri pondok</p>
         </div>
-        <Button>
-          <UserPlus className="h-4 w-4 mr-2" />
-          Tambah Santri
-        </Button>
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Tambah Santri
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Tambah Santri Baru</DialogTitle>
+              <DialogDescription>
+                Masukkan data santri baru untuk menambahkan ke sistem.
+              </DialogDescription>
+            </DialogHeader>
+            
+            {/* Tabs */}
+            <div className="flex gap-2 border-b">
+              <button
+                type="button"
+                onClick={() => setActiveTab("manual")}
+                className={`px-4 py-2 font-medium transition-colors ${
+                  activeTab === "manual"
+                    ? "border-b-2 border-primary text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Input Manual
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("excel")}
+                className={`px-4 py-2 font-medium transition-colors ${
+                  activeTab === "excel"
+                    ? "border-b-2 border-primary text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Import Excel
+              </button>
+            </div>
+
+            {/* Manual Input Form */}
+            {activeTab === "manual" && (
+              <form onSubmit={handleSubmit}>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="nis">NIS</Label>
+                    <Input
+                      id="nis"
+                      name="nis"
+                      value={formData.nis}
+                      onChange={handleInputChange}
+                      placeholder="Masukkan NIS"
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="nama">Nama</Label>
+                    <Input
+                      id="nama"
+                      name="nama"
+                      value={formData.nama}
+                      onChange={handleInputChange}
+                      placeholder="Masukkan nama lengkap"
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="kelas">Kelas</Label>
+                    <Input
+                      id="kelas"
+                      name="kelas"
+                      value={formData.kelas}
+                      onChange={handleInputChange}
+                      placeholder="Masukkan kelas"
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="asrama">Nomer Kamar</Label>
+                    <Input
+                      id="asrama"
+                      name="asrama"
+                      value={formData.asrama}
+                      onChange={handleInputChange}
+                      placeholder="Masukkan nomer kamar"
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="wali">Wali</Label>
+                    <Input
+                      id="wali"
+                      name="wali"
+                      value={formData.wali}
+                      onChange={handleInputChange}
+                      placeholder="Masukkan nama wali"
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      placeholder="contoh@email.com"
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      id="password"
+                      name="password"
+                      type="password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      placeholder="Masukkan password"
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="status">Status</Label>
+                    <select
+                      id="status"
+                      name="status"
+                      value={formData.status}
+                      onChange={handleInputChange}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      required
+                    >
+                      <option value="AKTIF">Aktif</option>
+                      <option value="NON_AKTIF">Tidak Aktif</option>
+                      <option value="LULUS">Lulus</option>
+                      <option value="KELUAR">Keluar</option>
+                    </select>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                    Batal
+                  </Button>
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? "Menyimpan..." : "Simpan"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            )}
+
+            {/* Excel Import Form */}
+            {activeTab === "excel" && (
+              <div className="py-4">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-sm text-muted-foreground">
+                    Upload file Excel (.xlsx) untuk menambahkan banyak santri sekaligus.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={downloadTemplate}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download Template
+                  </Button>
+                </div>
+
+                <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
+                  <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-sm font-medium mb-2">
+                    {excelFile ? excelFile.name : "Pilih file Excel"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mb-4">
+                    Format file: .xlsx dengan kolom NIS, Nama, Kelas, Nomer_Kamar, Wali, Status, Email, Password
+                  </p>
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    id="excel-upload"
+                  />
+                  <label
+                    htmlFor="excel-upload"
+                    className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 cursor-pointer"
+                  >
+                    {isUploading ? "Memuat..." : "Pilih File"}
+                  </label>
+                </div>
+
+                {/* Preview Table */}
+                {parsedData.length > 0 && (
+                  <div className="mt-6">
+                    <h4 className="text-sm font-medium mb-2">
+                      Preview Data ({parsedData.length} santri)
+                    </h4>
+                    <div className="max-h-60 overflow-y-auto border rounded-md">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-xs">NIS</TableHead>
+                            <TableHead className="text-xs">Nama</TableHead>
+                            <TableHead className="text-xs">Kelas</TableHead>
+                            <TableHead className="text-xs">Kamar</TableHead>
+                            <TableHead className="text-xs">Wali</TableHead>
+                            <TableHead className="text-xs">Email</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {parsedData.slice(0, 10).map((item, index) => (
+                            <TableRow key={index}>
+                              <TableCell className="text-xs">{item.nis}</TableCell>
+                              <TableCell className="text-xs">{item.nama}</TableCell>
+                              <TableCell className="text-xs">{item.kelas}</TableCell>
+                              <TableCell className="text-xs">{item.asrama}</TableCell>
+                              <TableCell className="text-xs">{item.wali}</TableCell>
+                              <TableCell className="text-xs">{item.email}</TableCell>
+                            </TableRow>
+                          ))}
+                          {parsedData.length > 10 && (
+                            <TableRow>
+                              <TableCell colSpan={6} className="text-xs text-center text-muted-foreground">
+                                ... dan {parsedData.length - 10} data lainnya
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+
+                <DialogFooter className="mt-6">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setIsAddDialogOpen(false)
+                      setParsedData([])
+                      setExcelFile(null)
+                    }}
+                  >
+                    Batal
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleBulkImport}
+                    disabled={isSubmitting || parsedData.length === 0}
+                  >
+                    {isSubmitting ? "Mengimpor..." : "Import Data"}
+                  </Button>
+                </DialogFooter>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Santri</DialogTitle>
+              <DialogDescription>
+                Ubah data santri yang ada di sistem.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleEditSubmit}>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-nis">NIS</Label>
+                  <Input
+                    id="edit-nis"
+                    name="nis"
+                    value={editFormData.nis}
+                    onChange={handleEditInputChange}
+                    placeholder="Masukkan NIS"
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-nama">Nama</Label>
+                  <Input
+                    id="edit-nama"
+                    name="nama"
+                    value={editFormData.nama}
+                    onChange={handleEditInputChange}
+                    placeholder="Masukkan nama lengkap"
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-kelas">Kelas</Label>
+                  <Input
+                    id="edit-kelas"
+                    name="kelas"
+                    value={editFormData.kelas}
+                    onChange={handleEditInputChange}
+                    placeholder="Masukkan kelas"
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-asrama">Nomer Kamar</Label>
+                  <Input
+                    id="edit-asrama"
+                    name="asrama"
+                    value={editFormData.asrama}
+                    onChange={handleEditInputChange}
+                    placeholder="Masukkan nomer kamar"
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-wali">Wali</Label>
+                  <Input
+                    id="edit-wali"
+                    name="wali"
+                    value={editFormData.wali}
+                    onChange={handleEditInputChange}
+                    placeholder="Masukkan nama wali"
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-email">Email</Label>
+                  <Input
+                    id="edit-email"
+                    name="email"
+                    type="email"
+                    value={editFormData.email}
+                    onChange={handleEditInputChange}
+                    placeholder="contoh@email.com"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-password">Password (Opsional - isi untuk mengubah)</Label>
+                  <Input
+                    id="edit-password"
+                    name="password"
+                    type="password"
+                    value={editFormData.password}
+                    onChange={handleEditInputChange}
+                    placeholder="Masukkan password baru"
+                    minLength={6}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-status">Status</Label>
+                  <select
+                    id="edit-status"
+                    name="status"
+                    value={editFormData.status}
+                    onChange={handleEditInputChange}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    required
+                  >
+                    <option value="AKTIF">Aktif</option>
+                    <option value="NON_AKTIF">Tidak Aktif</option>
+                    <option value="LULUS">Lulus</option>
+                    <option value="KELUAR">Keluar</option>
+                  </select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                  Batal
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Menyimpan..." : "Simpan"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Card>
@@ -739,7 +1354,12 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
           <div className="flex items-center gap-2 mb-4">
             <div className="relative flex-1">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Cari santri..." className="pl-8" />
+              <Input
+                placeholder="Cari santri..."
+                className="pl-8"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
           </div>
           <Table>
@@ -748,15 +1368,15 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
                 <TableHead>NIS</TableHead>
                 <TableHead>Nama</TableHead>
                 <TableHead>Kelas</TableHead>
-                <TableHead>Asrama</TableHead>
+                <TableHead>Nomer Kamar</TableHead>
                 <TableHead>Wali</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {santri.length > 0 ? (
-                santri.map((s) => (
+              {filteredSantri.length > 0 ? (
+                filteredSantri.map((s) => (
                   <TableRow key={s.id}>
                     <TableCell>{s.nis}</TableCell>
                     <TableCell>{s.nama}</TableCell>
@@ -770,10 +1390,15 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        <Button variant="ghost" size="icon">
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(s)} title="Edit">
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(s.id)}
+                          title="Hapus"
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -783,7 +1408,7 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
               ) : (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-muted-foreground">
-                    Belum ada data santri
+                    {searchQuery ? "Tidak ada santri yang cocok" : "Belum ada data santri"}
                   </TableCell>
                 </TableRow>
               )}

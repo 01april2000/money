@@ -1,7 +1,5 @@
 #!/usr/bin/env bun
 import { prisma } from '../lib/prisma';
-import { auth } from '../lib/auth';
-import { generateId } from 'better-auth';
 import { hashPassword } from 'better-auth/crypto';
 
 // Get command line arguments or use defaults
@@ -47,10 +45,6 @@ async function createAdminUser() {
       process.exit(1);
     }
 
-    // Generate ID for user and account
-    const userId = generateId();
-    const accountId = generateId();
-
     // Hash the password
     const hashedPassword = await hashPassword(password);
 
@@ -59,7 +53,7 @@ async function createAdminUser() {
       // Create user with ADMIN role
       await tx.user.create({
         data: {
-          id: userId,
+          id: `admin-${Date.now()}`,
           email,
           name,
           role: 'ADMIN',
@@ -70,8 +64,8 @@ async function createAdminUser() {
       // Create account with password
       await tx.account.create({
         data: {
-          id: accountId,
-          userId,
+          id: `account-admin-${Date.now()}`,
+          userId: `admin-${Date.now()}`,
           providerId: 'credential',
           accountId: email,
           password: hashedPassword,
@@ -80,10 +74,9 @@ async function createAdminUser() {
     });
 
     console.log('✅ Admin user created successfully!');
-    console.log(`User ID: ${userId}`);
     console.log(`Email: ${email}`);
+    console.log(`Password: ${password}`);
     console.log(`Role: ADMIN`);
-    console.log(`Email Verified: true`);
   } catch (error) {
     console.error('Error creating admin user:', error);
     process.exit(1);

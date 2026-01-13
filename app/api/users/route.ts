@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, email, role, password } = body
+    const { name, email, role, password, santriData } = body
 
     // Validate required fields
     if (!name || !email || !role || !password) {
@@ -62,6 +62,29 @@ export async function POST(request: NextRequest) {
         { error: `Invalid role. Must be one of: ${validRoles.join(", ")}` },
         { status: 400 }
       )
+    }
+
+    // If role is SANTRI and santriData is provided, validate santri data
+    if (role === "SANTRI" && santriData) {
+      const { nis, kelas, asrama, wali } = santriData
+      if (!nis || !kelas || !asrama || !wali) {
+        return NextResponse.json(
+          { error: "Missing required santri fields: nis, kelas, asrama, wali" },
+          { status: 400 }
+        )
+      }
+
+      // Check if NIS already exists
+      const existingSantri = await prisma.santri.findUnique({
+        where: { nis },
+      })
+
+      if (existingSantri) {
+        return NextResponse.json(
+          { error: "NIS already exists" },
+          { status: 400 }
+        )
+      }
     }
 
     // Check if email already exists
@@ -101,6 +124,28 @@ export async function POST(request: NextRequest) {
         password: password, // In production, hash this password
       },
     })
+
+    // If role is SANTRI and santriData is provided, create santri record
+    if (role === "SANTRI" && santriData) {
+      const { nis, kelas, asrama, wali, status } = santriData
+
+      const santri = await prisma.santri.create({
+        data: {
+          nis,
+          nama: name,
+          kelas,
+          asrama,
+          wali,
+          status: status || "AKTIF",
+        },
+      })
+
+      // Update user with santriId
+      await prisma.user.update({
+        where: { id: newUser.id },
+        data: { santriId: santri.id },
+      })
+    }
 
     return NextResponse.json(newUser, { status: 201 })
   } catch (error) {

@@ -65,7 +65,9 @@ function DialogContent({
         )}
         {...props}
       >
-        {children}
+        <div className="max-h-[calc(100vh-8rem)] overflow-y-auto">
+          {children}
+        </div>
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"

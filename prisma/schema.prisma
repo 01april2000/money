@@ -53,7 +53,8 @@ model User {
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
   accounts      Account[]
-  santri        Santri?
+  santri        Santri?   @relation(fields: [santriId], references: [id], onDelete: Cascade)
+  santriId      String?   @unique
 
   @@unique([email])
   @@map("user")
@@ -115,8 +116,7 @@ model Santri {
   asrama      String
   wali        String
   status      StatusSantri     @default(AKTIF)
-  userId      String?          @unique
-  user        User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user        User?            @relation
   transaksi   Transaksi[]
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt

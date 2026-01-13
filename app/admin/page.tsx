@@ -120,6 +120,13 @@ async function getUsers() {
 async function getSantri() {
   return await prisma.santri.findMany({
     orderBy: { createdAt: "desc" },
+    include: {
+      user: {
+        select: {
+          email: true,
+        },
+      },
+    },
   })
 }
 
@@ -318,6 +325,7 @@ export default async function AdminPage() {
       asrama: s.asrama,
       wali: s.wali,
       status: s.status,
+      email: s.user?.email || "",
     })),
     sppTransactions: sppTransactions.map((trx) => ({
       id: trx.kode,
