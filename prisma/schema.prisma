@@ -35,6 +35,18 @@ enum StatusTransaksi {
   DITOLAK
 }
 
+enum StatusUangSaku {
+  DITAMBAH
+  DIAMBIL
+}
+
+enum JenisBeasiswa {
+  FULL
+  SYAHRIAH
+  SPP
+  UANG_SAKU
+}
+
 enum StatusSantri {
   AKTIF
   NON_AKTIF
@@ -116,6 +128,8 @@ model Santri {
   asrama      String
   wali        String
   status      StatusSantri     @default(AKTIF)
+  beasiswa    Boolean          @default(false)
+  jenisBeasiswa JenisBeasiswa?
   user        User?            @relation
   transaksi   Transaksi[]
   createdAt   DateTime         @default(now())
@@ -124,6 +138,7 @@ model Santri {
   @@index([kelas])
   @@index([asrama])
   @@index([status])
+  @@index([beasiswa])
   @@map("santri")
 }
 
@@ -137,6 +152,7 @@ model Transaksi {
   jumlah          Int
   tanggalBayar    DateTime?
   status          StatusTransaksi @default(BELUM_BAYAR)
+  statusUangSaku  StatusUangSaku?
   jenisLaundry    String?
   keterangan      String?
   createdAt       DateTime        @default(now())
