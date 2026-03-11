@@ -1422,7 +1422,204 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
 
 // SPP Management
 function SPPManagement({ dashboardData }: { dashboardData?: DashboardContentProps["dashboardData"] }) {
-  const transactions = dashboardData?.sppTransactions || []
+  const initialTransactions = dashboardData?.sppTransactions || []
+  const [transactions, setTransactions] = React.useState(initialTransactions)
+  const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false)
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [santriList, setSantriList] = React.useState<any[]>([])
+  const [formData, setFormData] = React.useState({
+    santriId: "",
+    bulan: "",
+    jumlah: "",
+    status: "BELUM_BAYAR",
+    tanggalBayar: "",
+    keterangan: "",
+  })
+  const [editFormData, setEditFormData] = React.useState({
+    id: "",
+    santriId: "",
+    bulan: "",
+    jumlah: "",
+    status: "BELUM_BAYAR",
+    tanggalBayar: "",
+    keterangan: "",
+  })
+
+  // Fetch santri list on mount
+  React.useEffect(() => {
+    fetch("/api/santri")
+      .then(res => res.json())
+      .then(data => setSantriList(data))
+      .catch(err => console.error("Failed to fetch santri:", err))
+  }, [])
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch("/api/spp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...formData,
+          jumlah: parseInt(formData.jumlah),
+          tanggalBayar: formData.tanggalBayar ? new Date(formData.tanggalBayar) : null,
+        }),
+      })
+
+      const newTrx = await response.json()
+
+      if (!response.ok) {
+        throw new Error(newTrx.error || "Failed to create SPP transaction")
+      }
+
+      toast.success("Transaksi SPP berhasil ditambahkan!")
+      
+      // Refresh transactions
+      const refreshResponse = await fetch("/api/spp")
+      const allTransactions = await refreshResponse.json()
+      const formattedTransactions = allTransactions.map((trx: any) => ({
+        id: trx.id,
+        namaSantri: trx.santri.nama,
+        bulan: trx.bulan || "-",
+        jumlah: new Intl.NumberFormat("id-ID", {
+          style: "currency",
+          currency: "IDR",
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }).format(trx.jumlah),
+        tanggalBayar: trx.tanggalBayar ? new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }).format(new Date(trx.tanggalBayar)) : "-",
+        status: trx.status,
+        _raw: trx,
+      }))
+      setTransactions(formattedTransactions)
+      
+      setFormData({
+        santriId: "",
+        bulan: "",
+        jumlah: "",
+        status: "BELUM_BAYAR",
+        tanggalBayar: "",
+        keterangan: "",
+      })
+      setIsAddDialogOpen(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Terjadi kesalahan")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDelete = async (trxId: string) => {
+    toast.promise(
+      async () => {
+        const response = await fetch(`/api/spp/${trxId}`, {
+          method: "DELETE",
+        })
+
+        if (!response.ok) {
+          throw new Error("Gagal menghapus transaksi SPP")
+        }
+
+        return response.json()
+      },
+      {
+        loading: "Menghapus transaksi...",
+        success: () => {
+          setTransactions(prev => prev.filter(t => t.id !== trxId))
+          return "Transaksi SPP berhasil dihapus!"
+        },
+        error: "Gagal menghapus transaksi SPP",
+      }
+    )
+  }
+
+  const handleEdit = (trx: any) => {
+    setEditFormData({
+      id: trx.id,
+      santriId: trx._raw.santriId,
+      bulan: trx._raw.bulan || "",
+      jumlah: String(trx._raw.jumlah),
+      status: trx._raw.status,
+      tanggalBayar: trx._raw.tanggalBayar ? new Date(trx._raw.tanggalBayar).toISOString().split('T')[0] : "",
+      keterangan: trx._raw.keterangan || "",
+    })
+    setIsEditDialogOpen(true)
+  }
+
+  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setEditFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch(`/api/spp/${editFormData.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...editFormData,
+          jumlah: parseInt(editFormData.jumlah),
+          tanggalBayar: editFormData.tanggalBayar ? new Date(editFormData.tanggalBayar) : null,
+        }),
+      })
+
+      const updatedTrx = await response.json()
+
+      if (!response.ok) {
+        throw new Error(updatedTrx.error || "Failed to update SPP transaction")
+      }
+
+      toast.success("Transaksi SPP berhasil diperbarui!")
+      
+      // Refresh transactions
+      const refreshResponse = await fetch("/api/spp")
+      const allTransactions = await refreshResponse.json()
+      const formattedTransactions = allTransactions.map((trx: any) => ({
+        id: trx.id,
+        namaSantri: trx.santri.nama,
+        bulan: trx.bulan || "-",
+        jumlah: new Intl.NumberFormat("id-ID", {
+          style: "currency",
+          currency: "IDR",
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }).format(trx.jumlah),
+        tanggalBayar: trx.tanggalBayar ? new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }).format(new Date(trx.tanggalBayar)) : "-",
+        status: trx.status,
+        _raw: trx,
+      }))
+      setTransactions(formattedTransactions)
+      
+      setIsEditDialogOpen(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Terjadi kesalahan")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -1431,10 +1628,107 @@ function SPPManagement({ dashboardData }: { dashboardData?: DashboardContentProp
           <h1 className="text-3xl font-bold">Pembayaran SPP</h1>
           <p className="text-muted-foreground">Kelola pembayaran SPP santri</p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Tambah Transaksi
-        </Button>
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Tambah Transaksi
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Tambah Transaksi SPP</DialogTitle>
+              <DialogDescription>
+                Masukkan data pembayaran SPP baru.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit}>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="santriId">Santri</Label>
+                  <select
+                    id="santriId"
+                    name="santriId"
+                    value={formData.santriId}
+                    onChange={handleInputChange}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    required
+                  >
+                    <option value="">Pilih Santri</option>
+                    {santriList.map((santri) => (
+                      <option key={santri.id} value={santri.id}>
+                        {santri.nama} ({santri.nis})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bulan">Bulan</Label>
+                  <Input
+                    id="bulan"
+                    name="bulan"
+                    value={formData.bulan}
+                    onChange={handleInputChange}
+                    placeholder="Contoh: Januari 2024"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="jumlah">Jumlah</Label>
+                  <Input
+                    id="jumlah"
+                    name="jumlah"
+                    type="number"
+                    value={formData.jumlah}
+                    onChange={handleInputChange}
+                    placeholder="Contoh: 500000"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <select
+                    id="status"
+                    name="status"
+                    value={formData.status}
+                    onChange={handleInputChange}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="BELUM_BAYAR">Belum Bayar</option>
+                    <option value="PENDING">Pending</option>
+                    <option value="LUNAS">Lunas</option>
+                    <option value="DITOLAK">Ditolak</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="tanggalBayar">Tanggal Bayar</Label>
+                  <Input
+                    id="tanggalBayar"
+                    name="tanggalBayar"
+                    type="date"
+                    value={formData.tanggalBayar}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="keterangan">Keterangan</Label>
+                  <Input
+                    id="keterangan"
+                    name="keterangan"
+                    value={formData.keterangan}
+                    onChange={handleInputChange}
+                    placeholder="Keterangan tambahan"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Menyimpan..." : "Simpan"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Card>
@@ -1459,7 +1753,7 @@ function SPPManagement({ dashboardData }: { dashboardData?: DashboardContentProp
               {transactions.length > 0 ? (
                 transactions.map((trx) => (
                   <TableRow key={trx.id}>
-                    <TableCell>#{trx.id}</TableCell>
+                    <TableCell>#{trx.id.slice(0, 8)}...</TableCell>
                     <TableCell>{trx.namaSantri}</TableCell>
                     <TableCell>{trx.bulan}</TableCell>
                     <TableCell>{trx.jumlah}</TableCell>
@@ -1471,8 +1765,11 @@ function SPPManagement({ dashboardData }: { dashboardData?: DashboardContentProp
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        <Button variant="ghost" size="icon">
-                          <FileText className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(trx)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(trx.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
                     </TableCell>
@@ -1489,13 +1786,374 @@ function SPPManagement({ dashboardData }: { dashboardData?: DashboardContentProp
           </Table>
         </CardContent>
       </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Transaksi SPP</DialogTitle>
+            <DialogDescription>
+              Ubah data pembayaran SPP.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-santriId">Santri</Label>
+                <select
+                  id="edit-santriId"
+                  name="santriId"
+                  value={editFormData.santriId}
+                  onChange={handleEditInputChange}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  required
+                >
+                  <option value="">Pilih Santri</option>
+                  {santriList.map((santri) => (
+                    <option key={santri.id} value={santri.id}>
+                      {santri.nama} ({santri.nis})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-bulan">Bulan</Label>
+                <Input
+                  id="edit-bulan"
+                  name="bulan"
+                  value={editFormData.bulan}
+                  onChange={handleEditInputChange}
+                  placeholder="Contoh: Januari 2024"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-jumlah">Jumlah</Label>
+                <Input
+                  id="edit-jumlah"
+                  name="jumlah"
+                  type="number"
+                  value={editFormData.jumlah}
+                  onChange={handleEditInputChange}
+                  placeholder="Contoh: 500000"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-status">Status</Label>
+                <select
+                  id="edit-status"
+                  name="status"
+                  value={editFormData.status}
+                  onChange={handleEditInputChange}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="BELUM_BAYAR">Belum Bayar</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="LUNAS">Lunas</option>
+                  <option value="DITOLAK">Ditolak</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-tanggalBayar">Tanggal Bayar</Label>
+                <Input
+                  id="edit-tanggalBayar"
+                  name="tanggalBayar"
+                  type="date"
+                  value={editFormData.tanggalBayar}
+                  onChange={handleEditInputChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-keterangan">Keterangan</Label>
+                <Input
+                  id="edit-keterangan"
+                  name="keterangan"
+                  value={editFormData.keterangan}
+                  onChange={handleEditInputChange}
+                  placeholder="Keterangan tambahan"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Menyimpan..." : "Simpan"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
 // Syahriah Management
 function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardContentProps["dashboardData"] }) {
-  const transactions = dashboardData?.syahriahTransactions || []
+  const initialTransactions = dashboardData?.syahriahTransactions || []
+  const [transactions, setTransactions] = React.useState(initialTransactions)
+  const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false)
+  const [isGenerateDialogOpen, setIsGenerateDialogOpen] = React.useState(false)
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [santriList, setSantriList] = React.useState<any[]>([])
+  const [formData, setFormData] = React.useState({
+    santriId: "",
+    bulan: "",
+    jumlah: "",
+    status: "BELUM_BAYAR",
+    tanggalBayar: "",
+    keterangan: "",
+  })
+  const [editFormData, setEditFormData] = React.useState({
+    id: "",
+    santriId: "",
+    bulan: "",
+    jumlah: "",
+    status: "BELUM_BAYAR",
+    tanggalBayar: "",
+    keterangan: "",
+  })
+  const [generateFormData, setGenerateFormData] = React.useState({
+    bulan: "",
+    tahun: "",
+    jumlah: "",
+  })
+
+  // Fetch santri list on mount
+  React.useEffect(() => {
+    fetch("/api/santri")
+      .then(res => res.json())
+      .then(data => setSantriList(data))
+      .catch(err => console.error("Failed to fetch santri:", err))
+  }, [])
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch("/api/syahriah", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...formData,
+          jumlah: parseInt(formData.jumlah),
+          tanggalBayar: formData.tanggalBayar ? new Date(formData.tanggalBayar) : null,
+        }),
+      })
+
+      const newTrx = await response.json()
+
+      if (!response.ok) {
+        throw new Error(newTrx.error || "Failed to create Syahriah transaction")
+      }
+
+      toast.success("Transaksi Syahriah berhasil ditambahkan!")
+      
+      // Refresh transactions
+      const refreshResponse = await fetch("/api/syahriah")
+      const allTransactions = await refreshResponse.json()
+      const formattedTransactions = allTransactions.map((trx: any) => ({
+        id: trx.id,
+        namaSantri: trx.santri.nama,
+        bulan: trx.bulan || "-",
+        jumlah: new Intl.NumberFormat("id-ID", {
+          style: "currency",
+          currency: "IDR",
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }).format(trx.jumlah),
+        tanggalBayar: trx.tanggalBayar ? new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }).format(new Date(trx.tanggalBayar)) : "-",
+        status: trx.status,
+        _raw: trx,
+      }))
+      setTransactions(formattedTransactions)
+      
+      setFormData({
+        santriId: "",
+        bulan: "",
+        jumlah: "",
+        status: "BELUM_BAYAR",
+        tanggalBayar: "",
+        keterangan: "",
+      })
+      setIsAddDialogOpen(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Terjadi kesalahan")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDelete = async (trxId: string) => {
+    toast.promise(
+      async () => {
+        const response = await fetch(`/api/syahriah/${trxId}`, {
+          method: "DELETE",
+        })
+
+        if (!response.ok) {
+          throw new Error("Gagal menghapus transaksi Syahriah")
+        }
+
+        return response.json()
+      },
+      {
+        loading: "Menghapus transaksi...",
+        success: () => {
+          setTransactions(prev => prev.filter(t => t.id !== trxId))
+          return "Transaksi Syahriah berhasil dihapus!"
+        },
+        error: "Gagal menghapus transaksi Syahriah",
+      }
+    )
+  }
+
+  const handleEdit = (trx: any) => {
+    setEditFormData({
+      id: trx.id,
+      santriId: trx._raw.santriId,
+      bulan: trx._raw.bulan || "",
+      jumlah: String(trx._raw.jumlah),
+      status: trx._raw.status,
+      tanggalBayar: trx._raw.tanggalBayar ? new Date(trx._raw.tanggalBayar).toISOString().split('T')[0] : "",
+      keterangan: trx._raw.keterangan || "",
+    })
+    setIsEditDialogOpen(true)
+  }
+
+  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setEditFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch(`/api/syahriah/${editFormData.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...editFormData,
+          jumlah: parseInt(editFormData.jumlah),
+          tanggalBayar: editFormData.tanggalBayar ? new Date(editFormData.tanggalBayar) : null,
+        }),
+      })
+
+      const updatedTrx = await response.json()
+
+      if (!response.ok) {
+        throw new Error(updatedTrx.error || "Failed to update Syahriah transaction")
+      }
+
+      toast.success("Transaksi Syahriah berhasil diperbarui!")
+      
+      // Refresh transactions
+      const refreshResponse = await fetch("/api/syahriah")
+      const allTransactions = await refreshResponse.json()
+      const formattedTransactions = allTransactions.map((trx: any) => ({
+        id: trx.id,
+        namaSantri: trx.santri.nama,
+        bulan: trx.bulan || "-",
+        jumlah: new Intl.NumberFormat("id-ID", {
+          style: "currency",
+          currency: "IDR",
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }).format(trx.jumlah),
+        tanggalBayar: trx.tanggalBayar ? new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }).format(new Date(trx.tanggalBayar)) : "-",
+        status: trx.status,
+        _raw: trx,
+      }))
+      setTransactions(formattedTransactions)
+      
+      setIsEditDialogOpen(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Terjadi kesalahan")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleGenerateMonthly = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch("/api/syahriah/generate-monthly", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          bulan: generateFormData.bulan,
+          tahun: parseInt(generateFormData.tahun),
+          jumlah: parseInt(generateFormData.jumlah),
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to generate monthly Syahriah")
+      }
+
+      toast.success(`Berhasil generate ${result.count} transaksi Syahriah!`)
+      
+      // Refresh transactions
+      const refreshResponse = await fetch("/api/syahriah")
+      const allTransactions = await refreshResponse.json()
+      const formattedTransactions = allTransactions.map((trx: any) => ({
+        id: trx.id,
+        namaSantri: trx.santri.nama,
+        bulan: trx.bulan || "-",
+        jumlah: new Intl.NumberFormat("id-ID", {
+          style: "currency",
+          currency: "IDR",
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }).format(trx.jumlah),
+        tanggalBayar: trx.tanggalBayar ? new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }).format(new Date(trx.tanggalBayar)) : "-",
+        status: trx.status,
+        _raw: trx,
+      }))
+      setTransactions(formattedTransactions)
+      
+      setGenerateFormData({
+        bulan: "",
+        tahun: "",
+        jumlah: "",
+      })
+      setIsGenerateDialogOpen(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Terjadi kesalahan")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -1504,10 +2162,183 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
           <h1 className="text-3xl font-bold">Pembayaran Syahriah</h1>
           <p className="text-muted-foreground">Kelola pembayaran syahriah santri</p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Tambah Transaksi
-        </Button>
+        <div className="flex gap-2">
+          <Dialog open={isGenerateDialogOpen} onOpenChange={setIsGenerateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                Generate Bulanan
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Generate Pembayaran Syahriah Bulanan</DialogTitle>
+                <DialogDescription>
+                  Generate pembayaran syahriah untuk semua santri aktif.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleGenerateMonthly}>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="gen-bulan">Bulan</Label>
+                    <select
+                      id="gen-bulan"
+                      name="bulan"
+                      value={generateFormData.bulan}
+                      onChange={(e) => setGenerateFormData(prev => ({ ...prev, bulan: e.target.value }))}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      required
+                    >
+                      <option value="">Pilih Bulan</option>
+                      <option value="Januari">Januari</option>
+                      <option value="Februari">Februari</option>
+                      <option value="Maret">Maret</option>
+                      <option value="April">April</option>
+                      <option value="Mei">Mei</option>
+                      <option value="Juni">Juni</option>
+                      <option value="Juli">Juli</option>
+                      <option value="Agustus">Agustus</option>
+                      <option value="September">September</option>
+                      <option value="Oktober">Oktober</option>
+                      <option value="November">November</option>
+                      <option value="Desember">Desember</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="gen-tahun">Tahun</Label>
+                    <Input
+                      id="gen-tahun"
+                      name="tahun"
+                      type="number"
+                      value={generateFormData.tahun}
+                      onChange={(e) => setGenerateFormData(prev => ({ ...prev, tahun: e.target.value }))}
+                      placeholder="Contoh: 2024"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="gen-jumlah">Jumlah</Label>
+                    <Input
+                      id="gen-jumlah"
+                      name="jumlah"
+                      type="number"
+                      value={generateFormData.jumlah}
+                      onChange={(e) => setGenerateFormData(prev => ({ ...prev, jumlah: e.target.value }))}
+                      placeholder="Contoh: 300000"
+                      required
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? "Generating..." : "Generate"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Tambah Transaksi
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Tambah Transaksi Syahriah</DialogTitle>
+                <DialogDescription>
+                  Masukkan data pembayaran syahriah baru.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSubmit}>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="santriId">Santri</Label>
+                    <select
+                      id="santriId"
+                      name="santriId"
+                      value={formData.santriId}
+                      onChange={handleInputChange}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      required
+                    >
+                      <option value="">Pilih Santri</option>
+                      {santriList.map((santri) => (
+                        <option key={santri.id} value={santri.id}>
+                          {santri.nama} ({santri.nis})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bulan">Bulan</Label>
+                    <Input
+                      id="bulan"
+                      name="bulan"
+                      value={formData.bulan}
+                      onChange={handleInputChange}
+                      placeholder="Contoh: Januari 2024"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="jumlah">Jumlah</Label>
+                    <Input
+                      id="jumlah"
+                      name="jumlah"
+                      type="number"
+                      value={formData.jumlah}
+                      onChange={handleInputChange}
+                      placeholder="Contoh: 300000"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="status">Status</Label>
+                    <select
+                      id="status"
+                      name="status"
+                      value={formData.status}
+                      onChange={handleInputChange}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="BELUM_BAYAR">Belum Bayar</option>
+                      <option value="PENDING">Pending</option>
+                      <option value="LUNAS">Lunas</option>
+                      <option value="DITOLAK">Ditolak</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="tanggalBayar">Tanggal Bayar</Label>
+                    <Input
+                      id="tanggalBayar"
+                      name="tanggalBayar"
+                      type="date"
+                      value={formData.tanggalBayar}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="keterangan">Keterangan</Label>
+                    <Input
+                      id="keterangan"
+                      name="keterangan"
+                      value={formData.keterangan}
+                      onChange={handleInputChange}
+                      placeholder="Keterangan tambahan"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? "Menyimpan..." : "Simpan"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <Card>
@@ -1532,7 +2363,7 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
               {transactions.length > 0 ? (
                 transactions.map((trx) => (
                   <TableRow key={trx.id}>
-                    <TableCell>#{trx.id}</TableCell>
+                    <TableCell>#{trx.id.slice(0, 8)}...</TableCell>
                     <TableCell>{trx.namaSantri}</TableCell>
                     <TableCell>{trx.bulan}</TableCell>
                     <TableCell>{trx.jumlah}</TableCell>
@@ -1544,8 +2375,11 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        <Button variant="ghost" size="icon">
-                          <FileText className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(trx)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(trx.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
                     </TableCell>
@@ -1562,13 +2396,295 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
           </Table>
         </CardContent>
       </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Transaksi Syahriah</DialogTitle>
+            <DialogDescription>
+              Ubah data pembayaran syahriah.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-santriId">Santri</Label>
+                <select
+                  id="edit-santriId"
+                  name="santriId"
+                  value={editFormData.santriId}
+                  onChange={handleEditInputChange}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  required
+                >
+                  <option value="">Pilih Santri</option>
+                  {santriList.map((santri) => (
+                    <option key={santri.id} value={santri.id}>
+                      {santri.nama} ({santri.nis})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-bulan">Bulan</Label>
+                <Input
+                  id="edit-bulan"
+                  name="bulan"
+                  value={editFormData.bulan}
+                  onChange={handleEditInputChange}
+                  placeholder="Contoh: Januari 2024"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-jumlah">Jumlah</Label>
+                <Input
+                  id="edit-jumlah"
+                  name="jumlah"
+                  type="number"
+                  value={editFormData.jumlah}
+                  onChange={handleEditInputChange}
+                  placeholder="Contoh: 300000"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-status">Status</Label>
+                <select
+                  id="edit-status"
+                  name="status"
+                  value={editFormData.status}
+                  onChange={handleEditInputChange}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="BELUM_BAYAR">Belum Bayar</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="LUNAS">Lunas</option>
+                  <option value="DITOLAK">Ditolak</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-tanggalBayar">Tanggal Bayar</Label>
+                <Input
+                  id="edit-tanggalBayar"
+                  name="tanggalBayar"
+                  type="date"
+                  value={editFormData.tanggalBayar}
+                  onChange={handleEditInputChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-keterangan">Keterangan</Label>
+                <Input
+                  id="edit-keterangan"
+                  name="keterangan"
+                  value={editFormData.keterangan}
+                  onChange={handleEditInputChange}
+                  placeholder="Keterangan tambahan"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Menyimpan..." : "Simpan"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
 // Uang Saku Management
 function UangSakuManagement({ dashboardData }: { dashboardData?: DashboardContentProps["dashboardData"] }) {
-  const transactions = dashboardData?.uangSakuTransactions || []
+  const initialTransactions = dashboardData?.uangSakuTransactions || []
+  const [transactions, setTransactions] = React.useState(initialTransactions)
+  const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false)
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [santriList, setSantriList] = React.useState<any[]>([])
+  const [formData, setFormData] = React.useState({
+    santriId: "",
+    jumlah: "",
+    keterangan: "",
+    statusUangSaku: "DITAMBAH",
+  })
+  const [editFormData, setEditFormData] = React.useState({
+    id: "",
+    santriId: "",
+    jumlah: "",
+    keterangan: "",
+    statusUangSaku: "DITAMBAH",
+  })
+
+  // Fetch santri list on mount
+  React.useEffect(() => {
+    fetch("/api/santri")
+      .then(res => res.json())
+      .then(data => setSantriList(data))
+      .catch(err => console.error("Failed to fetch santri:", err))
+  }, [])
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch("/api/uang-saku", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...formData,
+          jumlah: parseInt(formData.jumlah),
+        }),
+      })
+
+      const newTrx = await response.json()
+
+      if (!response.ok) {
+        throw new Error(newTrx.error || "Failed to create Uang Saku transaction")
+      }
+
+      toast.success("Transaksi Uang Saku berhasil ditambahkan!")
+      
+      // Refresh transactions
+      const refreshResponse = await fetch("/api/uang-saku")
+      const allTransactions = await refreshResponse.json()
+      const formattedTransactions = allTransactions.map((trx: any) => ({
+        id: trx.id,
+        namaSantri: trx.santri.nama,
+        jumlah: new Intl.NumberFormat("id-ID", {
+          style: "currency",
+          currency: "IDR",
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }).format(trx.jumlah),
+        tanggal: new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }).format(new Date(trx.createdAt)),
+        status: trx.status,
+        _raw: trx,
+      }))
+      setTransactions(formattedTransactions)
+      
+      setFormData({
+        santriId: "",
+        jumlah: "",
+        keterangan: "",
+        statusUangSaku: "DITAMBAH",
+      })
+      setIsAddDialogOpen(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Terjadi kesalahan")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDelete = async (trxId: string) => {
+    toast.promise(
+      async () => {
+        const response = await fetch(`/api/uang-saku/${trxId}`, {
+          method: "DELETE",
+        })
+
+        if (!response.ok) {
+          throw new Error("Gagal menghapus transaksi Uang Saku")
+        }
+
+        return response.json()
+      },
+      {
+        loading: "Menghapus transaksi...",
+        success: () => {
+          setTransactions(prev => prev.filter(t => t.id !== trxId))
+          return "Transaksi Uang Saku berhasil dihapus!"
+        },
+        error: "Gagal menghapus transaksi Uang Saku",
+      }
+    )
+  }
+
+  const handleEdit = (trx: any) => {
+    setEditFormData({
+      id: trx.id,
+      santriId: trx._raw.santriId,
+      jumlah: String(trx._raw.jumlah),
+      keterangan: trx._raw.keterangan || "",
+      statusUangSaku: trx._raw.statusUangSaku || "DITAMBAH",
+    })
+    setIsEditDialogOpen(true)
+  }
+
+  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setEditFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch(`/api/uang-saku/${editFormData.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...editFormData,
+          jumlah: parseInt(editFormData.jumlah),
+        }),
+      })
+
+      const updatedTrx = await response.json()
+
+      if (!response.ok) {
+        throw new Error(updatedTrx.error || "Failed to update Uang Saku transaction")
+      }
+
+      toast.success("Transaksi Uang Saku berhasil diperbarui!")
+      
+      // Refresh transactions
+      const refreshResponse = await fetch("/api/uang-saku")
+      const allTransactions = await refreshResponse.json()
+      const formattedTransactions = allTransactions.map((trx: any) => ({
+        id: trx.id,
+        namaSantri: trx.santri.nama,
+        jumlah: new Intl.NumberFormat("id-ID", {
+          style: "currency",
+          currency: "IDR",
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }).format(trx.jumlah),
+        tanggal: new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }).format(new Date(trx.createdAt)),
+        status: trx.status,
+        _raw: trx,
+      }))
+      setTransactions(formattedTransactions)
+      
+      setIsEditDialogOpen(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Terjadi kesalahan")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -1577,10 +2693,84 @@ function UangSakuManagement({ dashboardData }: { dashboardData?: DashboardConten
           <h1 className="text-3xl font-bold">Uang Saku</h1>
           <p className="text-muted-foreground">Kelola pencairan uang saku santri</p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Tambah Transaksi
-        </Button>
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Tambah Transaksi
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Tambah Transaksi Uang Saku</DialogTitle>
+              <DialogDescription>
+                Masukkan data pencairan uang saku baru.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit}>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="santriId">Santri</Label>
+                  <select
+                    id="santriId"
+                    name="santriId"
+                    value={formData.santriId}
+                    onChange={handleInputChange}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    required
+                  >
+                    <option value="">Pilih Santri</option>
+                    {santriList.map((santri) => (
+                      <option key={santri.id} value={santri.id}>
+                        {santri.nama} ({santri.nis})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="jumlah">Jumlah</Label>
+                  <Input
+                    id="jumlah"
+                    name="jumlah"
+                    type="number"
+                    value={formData.jumlah}
+                    onChange={handleInputChange}
+                    placeholder="Contoh: 100000"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="statusUangSaku">Status</Label>
+                  <select
+                    id="statusUangSaku"
+                    name="statusUangSaku"
+                    value={formData.statusUangSaku}
+                    onChange={handleInputChange}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="DITAMBAH">Ditambah</option>
+                    <option value="DIAMBIL">Diambil</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="keterangan">Keterangan</Label>
+                  <Input
+                    id="keterangan"
+                    name="keterangan"
+                    value={formData.keterangan}
+                    onChange={handleInputChange}
+                    placeholder="Keterangan tambahan"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Menyimpan..." : "Simpan"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Card>
@@ -1604,7 +2794,7 @@ function UangSakuManagement({ dashboardData }: { dashboardData?: DashboardConten
               {transactions.length > 0 ? (
                 transactions.map((trx) => (
                   <TableRow key={trx.id}>
-                    <TableCell>#{trx.id}</TableCell>
+                    <TableCell>#{trx.id.slice(0, 8)}...</TableCell>
                     <TableCell>{trx.namaSantri}</TableCell>
                     <TableCell>{trx.jumlah}</TableCell>
                     <TableCell>{trx.tanggal}</TableCell>
@@ -1615,8 +2805,11 @@ function UangSakuManagement({ dashboardData }: { dashboardData?: DashboardConten
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        <Button variant="ghost" size="icon">
-                          <FileText className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(trx)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(trx.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
                     </TableCell>
@@ -1633,13 +2826,280 @@ function UangSakuManagement({ dashboardData }: { dashboardData?: DashboardConten
           </Table>
         </CardContent>
       </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Transaksi Uang Saku</DialogTitle>
+            <DialogDescription>
+              Ubah data pencairan uang saku.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-santriId">Santri</Label>
+                <select
+                  id="edit-santriId"
+                  name="santriId"
+                  value={editFormData.santriId}
+                  onChange={handleEditInputChange}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  required
+                >
+                  <option value="">Pilih Santri</option>
+                  {santriList.map((santri) => (
+                    <option key={santri.id} value={santri.id}>
+                      {santri.nama} ({santri.nis})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-jumlah">Jumlah</Label>
+                <Input
+                  id="edit-jumlah"
+                  name="jumlah"
+                  type="number"
+                  value={editFormData.jumlah}
+                  onChange={handleEditInputChange}
+                  placeholder="Contoh: 100000"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-statusUangSaku">Status</Label>
+                <select
+                  id="edit-statusUangSaku"
+                  name="statusUangSaku"
+                  value={editFormData.statusUangSaku}
+                  onChange={handleEditInputChange}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="DITAMBAH">Ditambah</option>
+                  <option value="DIAMBIL">Diambil</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-keterangan">Keterangan</Label>
+                <Input
+                  id="edit-keterangan"
+                  name="keterangan"
+                  value={editFormData.keterangan}
+                  onChange={handleEditInputChange}
+                  placeholder="Keterangan tambahan"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Menyimpan..." : "Simpan"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
 // Laundry Management
 function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContentProps["dashboardData"] }) {
-  const transactions = dashboardData?.laundryTransactions || []
+  const initialTransactions = dashboardData?.laundryTransactions || []
+  const [transactions, setTransactions] = React.useState(initialTransactions)
+  const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false)
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [santriList, setSantriList] = React.useState<any[]>([])
+  const [formData, setFormData] = React.useState({
+    santriId: "",
+    jenisLaundry: "",
+    jumlah: "",
+    status: "BELUM_BAYAR",
+    keterangan: "",
+  })
+  const [editFormData, setEditFormData] = React.useState({
+    id: "",
+    santriId: "",
+    jenisLaundry: "",
+    jumlah: "",
+    status: "BELUM_BAYAR",
+    keterangan: "",
+  })
+
+  // Fetch santri list on mount
+  React.useEffect(() => {
+    fetch("/api/santri")
+      .then(res => res.json())
+      .then(data => setSantriList(data))
+      .catch(err => console.error("Failed to fetch santri:", err))
+  }, [])
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch("/api/spp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...formData,
+          jenis: "LAUNDRY",
+          jumlah: parseInt(formData.jumlah),
+        }),
+      })
+
+      const newTrx = await response.json()
+
+      if (!response.ok) {
+        throw new Error(newTrx.error || "Failed to create Laundry transaction")
+      }
+
+      toast.success("Transaksi Laundry berhasil ditambahkan!")
+      
+      // Refresh transactions
+      const refreshResponse = await fetch("/api/spp?jenis=LAUNDRY")
+      const allTransactions = await refreshResponse.json()
+      const formattedTransactions = allTransactions.map((trx: any) => ({
+        id: trx.id,
+        namaSantri: trx.santri.nama,
+        jenisLaundry: trx.jenisLaundry || "-",
+        jumlah: new Intl.NumberFormat("id-ID", {
+          style: "currency",
+          currency: "IDR",
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }).format(trx.jumlah),
+        tanggal: new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }).format(new Date(trx.createdAt)),
+        status: trx.status,
+        _raw: trx,
+      }))
+      setTransactions(formattedTransactions)
+      
+      setFormData({
+        santriId: "",
+        jenisLaundry: "",
+        jumlah: "",
+        status: "BELUM_BAYAR",
+        keterangan: "",
+      })
+      setIsAddDialogOpen(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Terjadi kesalahan")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDelete = async (trxId: string) => {
+    toast.promise(
+      async () => {
+        const response = await fetch(`/api/spp/${trxId}`, {
+          method: "DELETE",
+        })
+
+        if (!response.ok) {
+          throw new Error("Gagal menghapus transaksi Laundry")
+        }
+
+        return response.json()
+      },
+      {
+        loading: "Menghapus transaksi...",
+        success: () => {
+          setTransactions(prev => prev.filter(t => t.id !== trxId))
+          return "Transaksi Laundry berhasil dihapus!"
+        },
+        error: "Gagal menghapus transaksi Laundry",
+      }
+    )
+  }
+
+  const handleEdit = (trx: any) => {
+    setEditFormData({
+      id: trx.id,
+      santriId: trx._raw.santriId,
+      jenisLaundry: trx._raw.jenisLaundry || "",
+      jumlah: String(trx._raw.jumlah),
+      status: trx._raw.status,
+      keterangan: trx._raw.keterangan || "",
+    })
+    setIsEditDialogOpen(true)
+  }
+
+  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setEditFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch(`/api/spp/${editFormData.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...editFormData,
+          jenis: "LAUNDRY",
+          jumlah: parseInt(editFormData.jumlah),
+        }),
+      })
+
+      const updatedTrx = await response.json()
+
+      if (!response.ok) {
+        throw new Error(updatedTrx.error || "Failed to update Laundry transaction")
+      }
+
+      toast.success("Transaksi Laundry berhasil diperbarui!")
+      
+      // Refresh transactions
+      const refreshResponse = await fetch("/api/spp?jenis=LAUNDRY")
+      const allTransactions = await refreshResponse.json()
+      const formattedTransactions = allTransactions.map((trx: any) => ({
+        id: trx.id,
+        namaSantri: trx.santri.nama,
+        jenisLaundry: trx.jenisLaundry || "-",
+        jumlah: new Intl.NumberFormat("id-ID", {
+          style: "currency",
+          currency: "IDR",
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }).format(trx.jumlah),
+        tanggal: new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }).format(new Date(trx.createdAt)),
+        status: trx.status,
+        _raw: trx,
+      }))
+      setTransactions(formattedTransactions)
+      
+      setIsEditDialogOpen(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Terjadi kesalahan")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -1648,10 +3108,97 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
           <h1 className="text-3xl font-bold">Laundry</h1>
           <p className="text-muted-foreground">Kelola transaksi laundry santri</p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Tambah Transaksi
-        </Button>
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Tambah Transaksi
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Tambah Transaksi Laundry</DialogTitle>
+              <DialogDescription>
+                Masukkan data transaksi laundry baru.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit}>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="santriId">Santri</Label>
+                  <select
+                    id="santriId"
+                    name="santriId"
+                    value={formData.santriId}
+                    onChange={handleInputChange}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    required
+                  >
+                    <option value="">Pilih Santri</option>
+                    {santriList.map((santri) => (
+                      <option key={santri.id} value={santri.id}>
+                        {santri.nama} ({santri.nis})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="jenisLaundry">Jenis Laundry</Label>
+                  <Input
+                    id="jenisLaundry"
+                    name="jenisLaundry"
+                    value={formData.jenisLaundry}
+                    onChange={handleInputChange}
+                    placeholder="Contoh: Cuci, Setrika, Cuci+Setrika"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="jumlah">Jumlah</Label>
+                  <Input
+                    id="jumlah"
+                    name="jumlah"
+                    type="number"
+                    value={formData.jumlah}
+                    onChange={handleInputChange}
+                    placeholder="Contoh: 15000"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <select
+                    id="status"
+                    name="status"
+                    value={formData.status}
+                    onChange={handleInputChange}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="BELUM_BAYAR">Belum Bayar</option>
+                    <option value="PENDING">Pending</option>
+                    <option value="LUNAS">Lunas</option>
+                    <option value="DITOLAK">Ditolak</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="keterangan">Keterangan</Label>
+                  <Input
+                    id="keterangan"
+                    name="keterangan"
+                    value={formData.keterangan}
+                    onChange={handleInputChange}
+                    placeholder="Keterangan tambahan"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Menyimpan..." : "Simpan"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Card>
@@ -1676,7 +3223,7 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
               {transactions.length > 0 ? (
                 transactions.map((trx) => (
                   <TableRow key={trx.id}>
-                    <TableCell>#{trx.id}</TableCell>
+                    <TableCell>#{trx.id.slice(0, 8)}...</TableCell>
                     <TableCell>{trx.namaSantri}</TableCell>
                     <TableCell>{trx.jenisLaundry}</TableCell>
                     <TableCell>{trx.jumlah}</TableCell>
@@ -1688,8 +3235,11 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        <Button variant="ghost" size="icon">
-                          <FileText className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(trx)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(trx.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
                     </TableCell>
@@ -1697,7 +3247,7 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground">
                     Belum ada data transaksi laundry
                   </TableCell>
                 </TableRow>
@@ -1706,6 +3256,93 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
           </Table>
         </CardContent>
       </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Transaksi Laundry</DialogTitle>
+            <DialogDescription>
+              Ubah data transaksi laundry.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-santriId">Santri</Label>
+                <select
+                  id="edit-santriId"
+                  name="santriId"
+                  value={editFormData.santriId}
+                  onChange={handleEditInputChange}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  required
+                >
+                  <option value="">Pilih Santri</option>
+                  {santriList.map((santri) => (
+                    <option key={santri.id} value={santri.id}>
+                      {santri.nama} ({santri.nis})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-jenisLaundry">Jenis Laundry</Label>
+                <Input
+                  id="edit-jenisLaundry"
+                  name="jenisLaundry"
+                  value={editFormData.jenisLaundry}
+                  onChange={handleEditInputChange}
+                  placeholder="Contoh: Cuci, Setrika, Cuci+Setrika"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-jumlah">Jumlah</Label>
+                <Input
+                  id="edit-jumlah"
+                  name="jumlah"
+                  type="number"
+                  value={editFormData.jumlah}
+                  onChange={handleEditInputChange}
+                  placeholder="Contoh: 15000"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-status">Status</Label>
+                <select
+                  id="edit-status"
+                  name="status"
+                  value={editFormData.status}
+                  onChange={handleEditInputChange}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="BELUM_BAYAR">Belum Bayar</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="LUNAS">Lunas</option>
+                  <option value="DITOLAK">Ditolak</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-keterangan">Keterangan</Label>
+                <Input
+                  id="edit-keterangan"
+                  name="keterangan"
+                  value={editFormData.keterangan}
+                  onChange={handleEditInputChange}
+                  placeholder="Keterangan tambahan"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Menyimpan..." : "Simpan"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

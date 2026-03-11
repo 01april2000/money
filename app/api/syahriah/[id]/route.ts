@@ -51,7 +51,8 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    console.log("PUT /api/syahriah/[id] - params:", params)
+    const { id } = await params
+    console.log("PUT /api/syahriah/[id] - params:", { id })
     // Check authentication and authorization
     const session = await auth.api.getSession({
       headers: await headers(),
@@ -75,7 +76,6 @@ export async function PUT(
       )
     }
 
-    const { id } = await params
     console.log("Transaction ID:", id)
     const body = await request.json()
     console.log("Request body:", body)
@@ -151,7 +151,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    console.log("DELETE /api/syahriah/[id] - params:", params)
+    const { id } = await params
+    console.log("DELETE /api/syahriah/[id] - params:", { id })
     // Check authentication and authorization
     const session = await auth.api.getSession({
       headers: await headers(),
@@ -175,7 +176,6 @@ export async function DELETE(
       )
     }
 
-    const { id } = await params
     console.log("Transaction ID:", id)
 
     // Check if transaction exists
