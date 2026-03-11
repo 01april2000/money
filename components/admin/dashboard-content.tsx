@@ -37,6 +37,7 @@ import {
   Upload,
   Download
 } from "lucide-react"
+import { BulkSyahriah } from "@/components/admin/bulk-syahriah"
 
 interface DashboardContentProps {
   activeItem: string
@@ -206,6 +207,8 @@ export function DashboardContent({ activeItem, dashboardData }: DashboardContent
       return <SPPManagement dashboardData={dashboardData} />
     case "syahriah":
       return <SyahriahManagement dashboardData={dashboardData} />
+    case "bulk-syahriah":
+      return <BulkSyahriah />
     case "uang-saku":
       return <UangSakuManagement dashboardData={dashboardData} />
     case "laundry":

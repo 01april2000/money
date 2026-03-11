@@ -2,19 +2,20 @@
 
 import * as React from "react"
 import { cn } from "@/lib/utils"
-import { 
-  Users, 
-  UserCheck, 
-  Wallet, 
-  FileText, 
-  Receipt, 
-  DollarSign, 
-  Shirt, 
+import {
+  Users,
+  UserCheck,
+  Wallet,
+  FileText,
+  Receipt,
+  DollarSign,
+  Shirt,
   BarChart3,
   ChevronRight,
   ChevronDown,
   LayoutDashboard,
-  LogOut
+  LogOut,
+  Layers
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -55,6 +56,11 @@ export const menuItems: MenuItem[] = [
         id: "syahriah",
         label: "Syahriah",
         icon: <Receipt className="h-4 w-4" />
+      },
+      {
+        id: "bulk-syahriah",
+        label: "Bulk Syahriah",
+        icon: <Layers className="h-4 w-4" />
       },
       {
         id: "uang-saku",
