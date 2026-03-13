@@ -3044,17 +3044,15 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
   const [santriList, setSantriList] = React.useState<any[]>([])
   const [formData, setFormData] = React.useState({
     santriId: "",
-    jenisLaundry: "",
-    jumlah: "",
-    status: "BELUM_BAYAR",
+    bulan: "",
+    tahun: "",
+    jenisLaundry: "Cuci Setrika",
     keterangan: "",
   })
   const [editFormData, setEditFormData] = React.useState({
     id: "",
     santriId: "",
-    jenisLaundry: "",
-    jumlah: "",
-    status: "BELUM_BAYAR",
+    status: "",
     keterangan: "",
   })
 
@@ -3076,15 +3074,17 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
     setIsSubmitting(true)
 
     try {
-      const response = await fetch("/api/spp", {
+      const response = await fetch("/api/laundry", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          ...formData,
-          jenis: "LAUNDRY",
-          jumlah: parseInt(formData.jumlah),
+          santriId: formData.santriId,
+          bulan: formData.bulan,
+          tahun: parseInt(formData.tahun),
+          jenisLaundry: formData.jenisLaundry,
+          keterangan: formData.keterangan,
         }),
       })
 
@@ -3097,12 +3097,14 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
       toast.success("Transaksi Laundry berhasil ditambahkan!")
       
       // Refresh transactions
-      const refreshResponse = await fetch("/api/spp?jenis=LAUNDRY")
+      const refreshResponse = await fetch("/api/laundry")
       const allTransactions = await refreshResponse.json()
       const formattedTransactions = allTransactions.map((trx: any) => ({
         id: trx.id,
         namaSantri: trx.santri.nama,
         jenisLaundry: trx.jenisLaundry || "-",
+        bulan: trx.bulan || "-",
+        tahun: trx.tahun || "-",
         jumlah: new Intl.NumberFormat("id-ID", {
           style: "currency",
           currency: "IDR",
@@ -3121,9 +3123,9 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
       
       setFormData({
         santriId: "",
-        jenisLaundry: "",
-        jumlah: "",
-        status: "BELUM_BAYAR",
+        bulan: "",
+        tahun: "",
+        jenisLaundry: "Cuci Setrika",
         keterangan: "",
       })
       setIsAddDialogOpen(false)
@@ -3137,7 +3139,7 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
   const handleDelete = async (trxId: string) => {
     toast.promise(
       async () => {
-        const response = await fetch(`/api/spp/${trxId}`, {
+        const response = await fetch(`/api/laundry/${trxId}`, {
           method: "DELETE",
         })
 
@@ -3180,15 +3182,14 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
     setIsSubmitting(true)
 
     try {
-      const response = await fetch(`/api/spp/${editFormData.id}`, {
-        method: "PUT",
+      const response = await fetch(`/api/laundry/${editFormData.id}`, {
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          ...editFormData,
-          jenis: "LAUNDRY",
-          jumlah: parseInt(editFormData.jumlah),
+          status: editFormData.status,
+          keterangan: editFormData.keterangan,
         }),
       })
 
@@ -3201,12 +3202,14 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
       toast.success("Transaksi Laundry berhasil diperbarui!")
       
       // Refresh transactions
-      const refreshResponse = await fetch("/api/spp?jenis=LAUNDRY")
+      const refreshResponse = await fetch("/api/laundry")
       const allTransactions = await refreshResponse.json()
       const formattedTransactions = allTransactions.map((trx: any) => ({
         id: trx.id,
         namaSantri: trx.santri.nama,
         jenisLaundry: trx.jenisLaundry || "-",
+        bulan: trx.bulan || "-",
+        tahun: trx.tahun || "-",
         jumlah: new Intl.NumberFormat("id-ID", {
           style: "currency",
           currency: "IDR",
@@ -3272,42 +3275,58 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
                     ))}
                   </select>
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="bulan">Bulan</Label>
+                    <select
+                      id="bulan"
+                      name="bulan"
+                      value={formData.bulan}
+                      onChange={handleInputChange}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      required
+                    >
+                      <option value="">Pilih Bulan</option>
+                      <option value="Januari">Januari</option>
+                      <option value="Februari">Februari</option>
+                      <option value="Maret">Maret</option>
+                      <option value="April">April</option>
+                      <option value="Mei">Mei</option>
+                      <option value="Juni">Juni</option>
+                      <option value="Juli">Juli</option>
+                      <option value="Agustus">Agustus</option>
+                      <option value="September">September</option>
+                      <option value="Oktober">Oktober</option>
+                      <option value="November">November</option>
+                      <option value="Desember">Desember</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="tahun">Tahun</Label>
+                    <Input
+                      id="tahun"
+                      name="tahun"
+                      type="number"
+                      value={formData.tahun}
+                      onChange={handleInputChange}
+                      placeholder="2026"
+                      required
+                    />
+                  </div>
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="jenisLaundry">Jenis Laundry</Label>
-                  <Input
+                  <select
                     id="jenisLaundry"
                     name="jenisLaundry"
                     value={formData.jenisLaundry}
                     onChange={handleInputChange}
-                    placeholder="Contoh: Cuci, Setrika, Cuci+Setrika"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="jumlah">Jumlah</Label>
-                  <Input
-                    id="jumlah"
-                    name="jumlah"
-                    type="number"
-                    value={formData.jumlah}
-                    onChange={handleInputChange}
-                    placeholder="Contoh: 15000"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
-                  <select
-                    id="status"
-                    name="status"
-                    value={formData.status}
-                    onChange={handleInputChange}
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   >
-                    <option value="BELUM_BAYAR">Belum Bayar</option>
-                    <option value="PENDING">Pending</option>
-                    <option value="LUNAS">Lunas</option>
-                    <option value="DITOLAK">Ditolak</option>
+                    <option value="Cuci Setrika">Cuci Setrika</option>
+                    <option value="Cuci">Cuci</option>
+                    <option value="Setrika">Setrika</option>
+                    <option value="Dry Clean">Dry Clean</option>
                   </select>
                 </div>
                 <div className="space-y-2">
@@ -3319,6 +3338,11 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
                     onChange={handleInputChange}
                     placeholder="Keterangan tambahan"
                   />
+                </div>
+                <div className="bg-muted p-3 rounded-md">
+                  <p className="text-sm text-muted-foreground">
+                    Harga: <span className="font-semibold text-foreground">Rp. 100.000 / bulan</span>
+                  </p>
                 </div>
               </div>
               <DialogFooter>
@@ -3343,6 +3367,7 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
                 <TableHead>ID</TableHead>
                 <TableHead>Nama Santri</TableHead>
                 <TableHead>Jenis</TableHead>
+                <TableHead>Periode</TableHead>
                 <TableHead>Jumlah</TableHead>
                 <TableHead>Tanggal</TableHead>
                 <TableHead>Status</TableHead>
@@ -3356,6 +3381,7 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
                     <TableCell>#{trx.id.slice(0, 8)}...</TableCell>
                     <TableCell>{trx.namaSantri}</TableCell>
                     <TableCell>{trx.jenisLaundry}</TableCell>
+                    <TableCell>{trx.bulan} {trx.tahun}</TableCell>
                     <TableCell>{trx.jumlah}</TableCell>
                     <TableCell>{trx.tanggal}</TableCell>
                     <TableCell>
@@ -3377,7 +3403,7 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center text-muted-foreground">
                     Belum ada data transaksi laundry
                   </TableCell>
                 </TableRow>
@@ -3398,56 +3424,24 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
           </DialogHeader>
           <form onSubmit={handleEditSubmit}>
             <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-santriId">Santri</Label>
-                <select
-                  id="edit-santriId"
-                  name="santriId"
-                  value={editFormData.santriId}
-                  onChange={handleEditInputChange}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  required
-                >
-                  <option value="">Pilih Santri</option>
-                  {santriList.map((santri) => (
-                    <option key={santri.id} value={santri.id}>
-                      {santri.nama} ({santri.nis})
-                    </option>
-                  ))}
-                </select>
+              <div className="bg-muted p-3 rounded-md mb-4">
+                <p className="text-sm font-medium">Informasi Transaksi</p>
+                <p className="text-sm text-muted-foreground">Santri: <span className="font-semibold text-foreground">{transactions.find(t => t.id === editFormData.id)?.namaSantri}</span></p>
+                <p className="text-sm text-muted-foreground">Jenis: <span className="font-semibold text-foreground">{transactions.find(t => t.id === editFormData.id)?.jenisLaundry}</span></p>
+                <p className="text-sm text-muted-foreground">Periode: <span className="font-semibold text-foreground">{transactions.find(t => t.id === editFormData.id)?.bulan} {transactions.find(t => t.id === editFormData.id)?.tahun}</span></p>
+                <p className="text-sm text-muted-foreground">Jumlah: <span className="font-semibold text-foreground">{transactions.find(t => t.id === editFormData.id)?.jumlah}</span></p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-jenisLaundry">Jenis Laundry</Label>
-                <Input
-                  id="edit-jenisLaundry"
-                  name="jenisLaundry"
-                  value={editFormData.jenisLaundry}
-                  onChange={handleEditInputChange}
-                  placeholder="Contoh: Cuci, Setrika, Cuci+Setrika"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-jumlah">Jumlah</Label>
-                <Input
-                  id="edit-jumlah"
-                  name="jumlah"
-                  type="number"
-                  value={editFormData.jumlah}
-                  onChange={handleEditInputChange}
-                  placeholder="Contoh: 15000"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-status">Status</Label>
+                <Label htmlFor="edit-status">Status Pembayaran</Label>
                 <select
                   id="edit-status"
                   name="status"
                   value={editFormData.status}
                   onChange={handleEditInputChange}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  required
                 >
+                  <option value="">Pilih Status</option>
                   <option value="BELUM_BAYAR">Belum Bayar</option>
                   <option value="PENDING">Pending</option>
                   <option value="LUNAS">Lunas</option>
