@@ -14,8 +14,7 @@ import {
   ChevronRight,
   ChevronDown,
   LayoutDashboard,
-  LogOut,
-  Layers
+  LogOut
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -56,11 +55,6 @@ export const menuItems: MenuItem[] = [
         id: "syahriah",
         label: "Syahriah",
         icon: <Receipt className="h-4 w-4" />
-      },
-      {
-        id: "bulk-syahriah",
-        label: "Bulk Syahriah",
-        icon: <Layers className="h-4 w-4" />
       },
       {
         id: "uang-saku",

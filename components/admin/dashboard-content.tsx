@@ -35,9 +35,10 @@ import {
   Clock,
   XCircle,
   Upload,
-  Download
+  Download,
+  Layers
 } from "lucide-react"
-import { BulkSyahriah } from "@/components/admin/bulk-syahriah"
+import { BulkSyahriahDialog } from "@/components/admin/bulk-syahriah-dialog"
 
 interface DashboardContentProps {
   activeItem: string
@@ -207,8 +208,6 @@ export function DashboardContent({ activeItem, dashboardData }: DashboardContent
       return <SPPManagement dashboardData={dashboardData} />
     case "syahriah":
       return <SyahriahManagement dashboardData={dashboardData} />
-    case "bulk-syahriah":
-      return <BulkSyahriah />
     case "uang-saku":
       return <UangSakuManagement dashboardData={dashboardData} />
     case "laundry":
@@ -1897,6 +1896,7 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false)
   const [isGenerateDialogOpen, setIsGenerateDialogOpen] = React.useState(false)
+  const [isBulkDialogOpen, setIsBulkDialogOpen] = React.useState(false)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [santriList, setSantriList] = React.useState<any[]>([])
   const [formData, setFormData] = React.useState({
@@ -2166,6 +2166,14 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
           <p className="text-muted-foreground">Kelola pembayaran syahriah santri</p>
         </div>
         <div className="flex gap-2">
+          <Dialog open={isBulkDialogOpen} onOpenChange={setIsBulkDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Layers className="h-4 w-4 mr-2" />
+                Bulk Syahriah
+              </Button>
+            </DialogTrigger>
+          </Dialog>
           <Dialog open={isGenerateDialogOpen} onOpenChange={setIsGenerateDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline">
@@ -2240,6 +2248,34 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
               </form>
             </DialogContent>
           </Dialog>
+          <BulkSyahriahDialog
+            open={isBulkDialogOpen}
+            onOpenChange={setIsBulkDialogOpen}
+            onSuccess={async () => {
+              // Refresh transactions
+              const refreshResponse = await fetch("/api/syahriah")
+              const allTransactions = await refreshResponse.json()
+              const formattedTransactions = allTransactions.map((trx: any) => ({
+                id: trx.id,
+                namaSantri: trx.santri.nama,
+                bulan: trx.bulan || "-",
+                jumlah: new Intl.NumberFormat("id-ID", {
+                  style: "currency",
+                  currency: "IDR",
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
+                }).format(trx.jumlah),
+                tanggalBayar: trx.tanggalBayar ? new Intl.DateTimeFormat("id-ID", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                }).format(new Date(trx.tanggalBayar)) : "-",
+                status: trx.status,
+                _raw: trx,
+              }))
+              setTransactions(formattedTransactions)
+            }}
+          />
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button>
