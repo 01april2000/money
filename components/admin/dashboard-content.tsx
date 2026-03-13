@@ -141,6 +141,10 @@ function getStatusBadgeColor(status: string): string {
     case "CAIR":
     case "Cair":
       return "bg-green-100 text-green-700"
+    case "DITAMBAH":
+      return "bg-green-100 text-green-700"
+    case "DIAMBIL":
+      return "bg-orange-100 text-orange-700"
     case "AKTIF":
     case "Aktif":
       return "bg-green-100 text-green-700"
@@ -163,6 +167,7 @@ function getStatusIcon(status: string) {
     case "Lunas":
     case "CAIR":
     case "Cair":
+    case "DITAMBAH":
       return <CheckCircle className="h-3 w-3" />
     case "PENDING":
     case "Pending":
@@ -170,6 +175,7 @@ function getStatusIcon(status: string) {
     case "BELUM_BAYAR":
     case "Belum Bayar":
     case "DITOLAK":
+    case "DIAMBIL":
       return <XCircle className="h-3 w-3" />
     default:
       return null
@@ -183,6 +189,7 @@ function getStatusTextColor(status: string): string {
     case "Lunas":
     case "CAIR":
     case "Cair":
+    case "DITAMBAH":
       return "text-green-600"
     case "PENDING":
     case "Pending":
@@ -190,6 +197,7 @@ function getStatusTextColor(status: string): string {
     case "BELUM_BAYAR":
     case "Belum Bayar":
     case "DITOLAK":
+    case "DIAMBIL":
       return "text-red-600"
     default:
       return "text-gray-600"
@@ -2191,12 +2199,12 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
             <DialogTrigger asChild>
               <Button variant="outline">
                 <Download className="h-4 w-4 mr-2" />
-                Generate Bulanan
+                Generate Bulanan/Tahunan
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Generate Pembayaran Syahriah Bulanan</DialogTitle>
+                <DialogTitle>Generate Pembayaran Syahriah Bulanan/Tahunan</DialogTitle>
                 <DialogDescription>
                   Generate pembayaran syahriah untuk semua santri aktif.
                 </DialogDescription>
@@ -2447,7 +2455,7 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
               <TableRow>
                 <TableHead>ID</TableHead>
                 <TableHead>Nama Santri</TableHead>
-                <TableHead>Bulan</TableHead>
+                <TableHead>Bulan/Tahunan</TableHead>
                 <TableHead>Jumlah</TableHead>
                 <TableHead>Tanggal Bayar</TableHead>
                 <TableHead>Status</TableHead>
@@ -2695,7 +2703,7 @@ function UangSakuManagement({ dashboardData }: { dashboardData?: DashboardConten
           month: "short",
           year: "numeric",
         }).format(new Date(trx.createdAt)),
-        status: trx.status,
+        status: trx.statusUangSaku,
         _raw: trx,
       }))
       setTransactions(formattedTransactions)
@@ -2795,7 +2803,7 @@ function UangSakuManagement({ dashboardData }: { dashboardData?: DashboardConten
           month: "short",
           year: "numeric",
         }).format(new Date(trx.createdAt)),
-        status: trx.status,
+        status: trx.statusUangSaku,
         _raw: trx,
       }))
       setTransactions(formattedTransactions)

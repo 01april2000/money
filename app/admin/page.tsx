@@ -42,6 +42,10 @@ function getStatusBadgeColor(status: string): string {
       return "bg-red-100 text-red-700"
     case "DITOLAK":
       return "bg-red-100 text-red-700"
+    case "DITAMBAH":
+      return "bg-green-100 text-green-700"
+    case "DIAMBIL":
+      return "bg-orange-100 text-orange-700"
     case "AKTIF":
       return "bg-green-100 text-green-700"
     case "NON_AKTIF":
@@ -353,7 +357,7 @@ export default async function AdminPage() {
       namaSantri: trx.santri.nama,
       jumlah: formatCurrency(trx.jumlah),
       tanggal: formatDate(trx.tanggalBayar || trx.createdAt),
-      status: trx.status,
+      status: trx.statusUangSaku,
       _raw: trx,
     })),
     laundryTransactions: laundryTransactions.map((trx) => ({
