@@ -76,34 +76,66 @@ interface DashboardContentProps {
     }>
     sppTransactions?: Array<{
       id: string
+      kode: string
       namaSantri: string
+      nis: string
+      kelas: string
+      asrama: string
       bulan: string
+      periodePembayaran: string
+      tahun: string
       jumlah: string
       tanggalBayar: string
+      keterangan: string
+      createdAt: string
       status: string
+      _raw?: any
     }>
     syahriahTransactions?: Array<{
       id: string
+      kode: string
       namaSantri: string
+      nis: string
+      kelas: string
+      asrama: string
       bulan: string
+      periodePembayaran: string
+      tahun: string
       jumlah: string
       tanggalBayar: string
+      keterangan: string
+      createdAt: string
       status: string
+      _raw?: any
     }>
     uangSakuTransactions?: Array<{
       id: string
+      kode: string
       namaSantri: string
+      nis: string
+      kelas: string
+      asrama: string
       jumlah: string
       tanggal: string
+      keterangan: string
+      createdAt: string
       status: string
+      _raw?: any
     }>
     laundryTransactions?: Array<{
       id: string
+      kode: string
       namaSantri: string
+      nis: string
+      kelas: string
+      asrama: string
       jenisLaundry: string
       jumlah: string
       tanggal: string
+      keterangan: string
+      createdAt: string
       status: string
+      _raw?: any
     }>
     financialSummary?: {
       totalIncome: string
@@ -1436,6 +1468,8 @@ function SPPManagement({ dashboardData }: { dashboardData?: DashboardContentProp
   const [transactions, setTransactions] = React.useState(initialTransactions)
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false)
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = React.useState(false)
+  const [selectedTransaction, setSelectedTransaction] = React.useState<any>(null)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [santriList, setSantriList] = React.useState<any[]>([])
   const [formData, setFormData] = React.useState({
@@ -1499,8 +1533,14 @@ function SPPManagement({ dashboardData }: { dashboardData?: DashboardContentProp
       const allTransactions = await refreshResponse.json()
       const formattedTransactions = allTransactions.map((trx: any) => ({
         id: trx.id,
+        kode: trx.kode || "-",
         namaSantri: trx.santri.nama,
+        nis: trx.santri.nis || "-",
+        kelas: trx.santri.kelas || "-",
+        asrama: trx.santri.asrama || "-",
         bulan: trx.bulan || "-",
+        periodePembayaran: trx.periodePembayaran || "-",
+        tahun: trx.tahun || "-",
         jumlah: new Intl.NumberFormat("id-ID", {
           style: "currency",
           currency: "IDR",
@@ -1512,6 +1552,14 @@ function SPPManagement({ dashboardData }: { dashboardData?: DashboardContentProp
           month: "short",
           year: "numeric",
         }).format(new Date(trx.tanggalBayar)) : "-",
+        keterangan: trx.keterangan || "-",
+        createdAt: trx.createdAt ? new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(new Date(trx.createdAt)) : "-",
         status: trx.status,
         _raw: trx,
       }))
@@ -1570,6 +1618,11 @@ function SPPManagement({ dashboardData }: { dashboardData?: DashboardContentProp
     setIsEditDialogOpen(true)
   }
 
+  const handleViewDetail = (trx: any) => {
+    setSelectedTransaction(trx)
+    setIsDetailDialogOpen(true)
+  }
+
   const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setEditFormData(prev => ({ ...prev, [name]: value }))
@@ -1605,8 +1658,14 @@ function SPPManagement({ dashboardData }: { dashboardData?: DashboardContentProp
       const allTransactions = await refreshResponse.json()
       const formattedTransactions = allTransactions.map((trx: any) => ({
         id: trx.id,
+        kode: trx.kode || "-",
         namaSantri: trx.santri.nama,
+        nis: trx.santri.nis || "-",
+        kelas: trx.santri.kelas || "-",
+        asrama: trx.santri.asrama || "-",
         bulan: trx.bulan || "-",
+        periodePembayaran: trx.periodePembayaran || "-",
+        tahun: trx.tahun || "-",
         jumlah: new Intl.NumberFormat("id-ID", {
           style: "currency",
           currency: "IDR",
@@ -1618,6 +1677,14 @@ function SPPManagement({ dashboardData }: { dashboardData?: DashboardContentProp
           month: "short",
           year: "numeric",
         }).format(new Date(trx.tanggalBayar)) : "-",
+        keterangan: trx.keterangan || "-",
+        createdAt: trx.createdAt ? new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(new Date(trx.createdAt)) : "-",
         status: trx.status,
         _raw: trx,
       }))
@@ -1750,11 +1817,10 @@ function SPPManagement({ dashboardData }: { dashboardData?: DashboardContentProp
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID</TableHead>
+                <TableHead>Kode</TableHead>
                 <TableHead>Nama Santri</TableHead>
                 <TableHead>Bulan</TableHead>
                 <TableHead>Jumlah</TableHead>
-                <TableHead>Tanggal Bayar</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Aksi</TableHead>
               </TableRow>
@@ -1763,11 +1829,10 @@ function SPPManagement({ dashboardData }: { dashboardData?: DashboardContentProp
               {transactions.length > 0 ? (
                 transactions.map((trx) => (
                   <TableRow key={trx.id}>
-                    <TableCell>#{trx.id.slice(0, 8)}...</TableCell>
+                    <TableCell className="font-mono text-xs">{trx.kode}</TableCell>
                     <TableCell>{trx.namaSantri}</TableCell>
                     <TableCell>{trx.bulan}</TableCell>
                     <TableCell>{trx.jumlah}</TableCell>
-                    <TableCell>{trx.tanggalBayar}</TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadgeColor(trx.status)}`}>
                         {trx.status}
@@ -1775,6 +1840,9 @@ function SPPManagement({ dashboardData }: { dashboardData?: DashboardContentProp
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => handleViewDetail(trx)}>
+                          <FileText className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(trx)}>
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -1787,7 +1855,7 @@ function SPPManagement({ dashboardData }: { dashboardData?: DashboardContentProp
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
                     Belum ada data pembayaran SPP
                   </TableCell>
                 </TableRow>
@@ -1796,6 +1864,80 @@ function SPPManagement({ dashboardData }: { dashboardData?: DashboardContentProp
           </Table>
         </CardContent>
       </Card>
+
+      {/* Detail Dialog */}
+      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Detail Transaksi SPP</DialogTitle>
+            <DialogDescription>
+              Informasi lengkap transaksi pembayaran SPP.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedTransaction && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground">Kode Transaksi</Label>
+                  <p className="font-mono text-sm">{selectedTransaction.kode}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Status</Label>
+                  <p>
+                    <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadgeColor(selectedTransaction.status)}`}>
+                      {selectedTransaction.status}
+                    </span>
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Nama Santri</Label>
+                  <p>{selectedTransaction.namaSantri}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">NIS</Label>
+                  <p>{selectedTransaction.nis}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Kelas</Label>
+                  <p>{selectedTransaction.kelas}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Asrama</Label>
+                  <p>{selectedTransaction.asrama}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Bulan</Label>
+                  <p>{selectedTransaction.bulan}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Periode Pembayaran</Label>
+                  <p>{selectedTransaction.periodePembayaran}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Tahun</Label>
+                  <p>{selectedTransaction.tahun}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Jumlah</Label>
+                  <p className="font-semibold">{selectedTransaction.jumlah}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Tanggal Bayar</Label>
+                  <p>{selectedTransaction.tanggalBayar}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Dibuat</Label>
+                  <p className="text-xs">{selectedTransaction.createdAt}</p>
+                </div>
+                <div className="col-span-2">
+                  <Label className="text-muted-foreground">Keterangan</Label>
+                  <p className="text-sm">{selectedTransaction.keterangan}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -1903,6 +2045,8 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
   const [transactions, setTransactions] = React.useState(initialTransactions)
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false)
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = React.useState(false)
+  const [selectedTransaction, setSelectedTransaction] = React.useState<any>(null)
   const [isGenerateDialogOpen, setIsGenerateDialogOpen] = React.useState(false)
   const [isBulkDialogOpen, setIsBulkDialogOpen] = React.useState(false)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
@@ -1980,8 +2124,14 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
       const allTransactions = await refreshResponse.json()
       const formattedTransactions = allTransactions.map((trx: any) => ({
         id: trx.id,
+        kode: trx.kode || "-",
         namaSantri: trx.santri.nama,
+        nis: trx.santri.nis || "-",
+        kelas: trx.santri.kelas || "-",
+        asrama: trx.santri.asrama || "-",
         bulan: trx.bulan || "-",
+        periodePembayaran: trx.periodePembayaran || "-",
+        tahun: trx.tahun || "-",
         jumlah: new Intl.NumberFormat("id-ID", {
           style: "currency",
           currency: "IDR",
@@ -1993,6 +2143,14 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
           month: "short",
           year: "numeric",
         }).format(new Date(trx.tanggalBayar)) : "-",
+        keterangan: trx.keterangan || "-",
+        createdAt: trx.createdAt ? new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(new Date(trx.createdAt)) : "-",
         status: trx.status,
         _raw: trx,
       }))
@@ -2049,8 +2207,15 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
       status: trx._raw.status,
       tanggalBayar: trx._raw.tanggalBayar ? new Date(trx._raw.tanggalBayar).toISOString().split('T')[0] : "",
       keterangan: trx._raw.keterangan || "",
+      periodePembayaran: trx._raw.periodePembayaran || "",
+      tahun: trx._raw.tahun ? String(trx._raw.tahun) : "",
     })
     setIsEditDialogOpen(true)
+  }
+
+  const handleViewDetail = (trx: any) => {
+    setSelectedTransaction(trx)
+    setIsDetailDialogOpen(true)
   }
 
   const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -2090,8 +2255,14 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
       const allTransactions = await refreshResponse.json()
       const formattedTransactions = allTransactions.map((trx: any) => ({
         id: trx.id,
+        kode: trx.kode || "-",
         namaSantri: trx.santri.nama,
+        nis: trx.santri.nis || "-",
+        kelas: trx.santri.kelas || "-",
+        asrama: trx.santri.asrama || "-",
         bulan: trx.bulan || "-",
+        periodePembayaran: trx.periodePembayaran || "-",
+        tahun: trx.tahun || "-",
         jumlah: new Intl.NumberFormat("id-ID", {
           style: "currency",
           currency: "IDR",
@@ -2103,6 +2274,14 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
           month: "short",
           year: "numeric",
         }).format(new Date(trx.tanggalBayar)) : "-",
+        keterangan: trx.keterangan || "-",
+        createdAt: trx.createdAt ? new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(new Date(trx.createdAt)) : "-",
         status: trx.status,
         _raw: trx,
       }))
@@ -2147,8 +2326,14 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
       const allTransactions = await refreshResponse.json()
       const formattedTransactions = allTransactions.map((trx: any) => ({
         id: trx.id,
+        kode: trx.kode || "-",
         namaSantri: trx.santri.nama,
+        nis: trx.santri.nis || "-",
+        kelas: trx.santri.kelas || "-",
+        asrama: trx.santri.asrama || "-",
         bulan: trx.bulan || "-",
+        periodePembayaran: trx.periodePembayaran || "-",
+        tahun: trx.tahun || "-",
         jumlah: new Intl.NumberFormat("id-ID", {
           style: "currency",
           currency: "IDR",
@@ -2160,6 +2345,14 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
           month: "short",
           year: "numeric",
         }).format(new Date(trx.tanggalBayar)) : "-",
+        keterangan: trx.keterangan || "-",
+        createdAt: trx.createdAt ? new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(new Date(trx.createdAt)) : "-",
         status: trx.status,
         _raw: trx,
       }))
@@ -2294,8 +2487,14 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
               const allTransactions = await refreshResponse.json()
               const formattedTransactions = allTransactions.map((trx: any) => ({
                 id: trx.id,
+                kode: trx.kode || "-",
                 namaSantri: trx.santri.nama,
+                nis: trx.santri.nis || "-",
+                kelas: trx.santri.kelas || "-",
+                asrama: trx.santri.asrama || "-",
                 bulan: trx.bulan || "-",
+                periodePembayaran: trx.periodePembayaran || "-",
+                tahun: trx.tahun || "-",
                 jumlah: new Intl.NumberFormat("id-ID", {
                   style: "currency",
                   currency: "IDR",
@@ -2307,6 +2506,14 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
                   month: "short",
                   year: "numeric",
                 }).format(new Date(trx.tanggalBayar)) : "-",
+                keterangan: trx.keterangan || "-",
+                createdAt: trx.createdAt ? new Intl.DateTimeFormat("id-ID", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }).format(new Date(trx.createdAt)) : "-",
                 status: trx.status,
                 _raw: trx,
               }))
@@ -2453,11 +2660,10 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID</TableHead>
+                <TableHead>Kode</TableHead>
                 <TableHead>Nama Santri</TableHead>
-                <TableHead>Bulan/Tahunan</TableHead>
+                <TableHead>Bulan</TableHead>
                 <TableHead>Jumlah</TableHead>
-                <TableHead>Tanggal Bayar</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Aksi</TableHead>
               </TableRow>
@@ -2466,11 +2672,10 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
               {transactions.length > 0 ? (
                 transactions.map((trx) => (
                   <TableRow key={trx.id}>
-                    <TableCell>#{trx.id.slice(0, 8)}...</TableCell>
+                    <TableCell className="font-mono text-xs">{trx.kode}</TableCell>
                     <TableCell>{trx.namaSantri}</TableCell>
                     <TableCell>{trx.bulan}</TableCell>
                     <TableCell>{trx.jumlah}</TableCell>
-                    <TableCell>{trx.tanggalBayar}</TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadgeColor(trx.status)}`}>
                         {trx.status}
@@ -2478,6 +2683,9 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => handleViewDetail(trx)}>
+                          <FileText className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(trx)}>
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -2490,7 +2698,7 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
                     Belum ada data pembayaran Syahriah
                   </TableCell>
                 </TableRow>
@@ -2499,6 +2707,80 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
           </Table>
         </CardContent>
       </Card>
+
+      {/* Detail Dialog */}
+      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Detail Transaksi Syahriah</DialogTitle>
+            <DialogDescription>
+              Informasi lengkap transaksi pembayaran Syahriah.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedTransaction && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground">Kode Transaksi</Label>
+                  <p className="font-mono text-sm">{selectedTransaction.kode}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Status</Label>
+                  <p>
+                    <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadgeColor(selectedTransaction.status)}`}>
+                      {selectedTransaction.status}
+                    </span>
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Nama Santri</Label>
+                  <p>{selectedTransaction.namaSantri}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">NIS</Label>
+                  <p>{selectedTransaction.nis}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Kelas</Label>
+                  <p>{selectedTransaction.kelas}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Asrama</Label>
+                  <p>{selectedTransaction.asrama}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Bulan</Label>
+                  <p>{selectedTransaction.bulan}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Periode Pembayaran</Label>
+                  <p>{selectedTransaction.periodePembayaran}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Tahun</Label>
+                  <p>{selectedTransaction.tahun}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Jumlah</Label>
+                  <p className="font-semibold">{selectedTransaction.jumlah}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Tanggal Bayar</Label>
+                  <p>{selectedTransaction.tanggalBayar}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Dibuat</Label>
+                  <p className="text-xs">{selectedTransaction.createdAt}</p>
+                </div>
+                <div className="col-span-2">
+                  <Label className="text-muted-foreground">Keterangan</Label>
+                  <p className="text-sm">{selectedTransaction.keterangan}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -2633,6 +2915,8 @@ function UangSakuManagement({ dashboardData }: { dashboardData?: DashboardConten
   const [transactions, setTransactions] = React.useState(initialTransactions)
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false)
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = React.useState(false)
+  const [selectedTransaction, setSelectedTransaction] = React.useState<any>(null)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [santriList, setSantriList] = React.useState<any[]>([])
   const [formData, setFormData] = React.useState({
@@ -2755,6 +3039,11 @@ function UangSakuManagement({ dashboardData }: { dashboardData?: DashboardConten
       statusUangSaku: trx._raw.statusUangSaku || "DITAMBAH",
     })
     setIsEditDialogOpen(true)
+  }
+
+  const handleViewDetail = (trx: any) => {
+    setSelectedTransaction(trx)
+    setIsDetailDialogOpen(true)
   }
 
   const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -2912,10 +3201,9 @@ function UangSakuManagement({ dashboardData }: { dashboardData?: DashboardConten
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID</TableHead>
+                <TableHead>Kode</TableHead>
                 <TableHead>Nama Santri</TableHead>
                 <TableHead>Jumlah</TableHead>
-                <TableHead>Tanggal</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Aksi</TableHead>
               </TableRow>
@@ -2924,10 +3212,9 @@ function UangSakuManagement({ dashboardData }: { dashboardData?: DashboardConten
               {transactions.length > 0 ? (
                 transactions.map((trx) => (
                   <TableRow key={trx.id}>
-                    <TableCell>#{trx.id.slice(0, 8)}...</TableCell>
+                    <TableCell className="font-mono text-xs">{trx.kode}</TableCell>
                     <TableCell>{trx.namaSantri}</TableCell>
                     <TableCell>{trx.jumlah}</TableCell>
-                    <TableCell>{trx.tanggal}</TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadgeColor(trx.status)}`}>
                         {trx.status}
@@ -2935,6 +3222,9 @@ function UangSakuManagement({ dashboardData }: { dashboardData?: DashboardConten
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => handleViewDetail(trx)}>
+                          <FileText className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(trx)}>
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -2947,7 +3237,7 @@ function UangSakuManagement({ dashboardData }: { dashboardData?: DashboardConten
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center text-muted-foreground">
                     Belum ada data pencairan uang saku
                   </TableCell>
                 </TableRow>
@@ -2956,6 +3246,68 @@ function UangSakuManagement({ dashboardData }: { dashboardData?: DashboardConten
           </Table>
         </CardContent>
       </Card>
+
+      {/* Detail Dialog */}
+      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Detail Transaksi Uang Saku</DialogTitle>
+            <DialogDescription>
+              Informasi lengkap transaksi pencairan uang saku.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedTransaction && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground">Kode Transaksi</Label>
+                  <p className="font-mono text-sm">{selectedTransaction.kode}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Status</Label>
+                  <p>
+                    <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadgeColor(selectedTransaction.status)}`}>
+                      {selectedTransaction.status}
+                    </span>
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Nama Santri</Label>
+                  <p>{selectedTransaction.namaSantri}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">NIS</Label>
+                  <p>{selectedTransaction.nis}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Kelas</Label>
+                  <p>{selectedTransaction.kelas}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Asrama</Label>
+                  <p>{selectedTransaction.asrama}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Jumlah</Label>
+                  <p className="font-semibold">{selectedTransaction.jumlah}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Tanggal</Label>
+                  <p>{selectedTransaction.tanggal}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Dibuat</Label>
+                  <p className="text-xs">{selectedTransaction.createdAt}</p>
+                </div>
+                <div className="col-span-2">
+                  <Label className="text-muted-foreground">Keterangan</Label>
+                  <p className="text-sm">{selectedTransaction.keterangan}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -3040,6 +3392,8 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
   const [transactions, setTransactions] = React.useState(initialTransactions)
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false)
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = React.useState(false)
+  const [selectedTransaction, setSelectedTransaction] = React.useState<any>(null)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [santriList, setSantriList] = React.useState<any[]>([])
   const [formData, setFormData] = React.useState({
@@ -3052,6 +3406,8 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
   const [editFormData, setEditFormData] = React.useState({
     id: "",
     santriId: "",
+    bulan: "",
+    tahun: "",
     status: "",
     keterangan: "",
   })
@@ -3101,7 +3457,11 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
       const allTransactions = await refreshResponse.json()
       const formattedTransactions = allTransactions.map((trx: any) => ({
         id: trx.id,
+        kode: trx.kode || "-",
         namaSantri: trx.santri.nama,
+        nis: trx.santri.nis || "-",
+        kelas: trx.santri.kelas || "-",
+        asrama: trx.santri.asrama || "-",
         jenisLaundry: trx.jenisLaundry || "-",
         bulan: trx.bulan || "-",
         tahun: trx.tahun || "-",
@@ -3116,6 +3476,14 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
           month: "short",
           year: "numeric",
         }).format(new Date(trx.createdAt)),
+        keterangan: trx.keterangan || "-",
+        createdAt: trx.createdAt ? new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(new Date(trx.createdAt)) : "-",
         status: trx.status,
         _raw: trx,
       }))
@@ -3164,12 +3532,19 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
     setEditFormData({
       id: trx.id,
       santriId: trx._raw.santriId,
+      bulan: trx._raw.bulan || "",
+      tahun: trx._raw.tahun ? String(trx._raw.tahun) : "",
       jenisLaundry: trx._raw.jenisLaundry || "",
       jumlah: String(trx._raw.jumlah),
       status: trx._raw.status,
       keterangan: trx._raw.keterangan || "",
     })
     setIsEditDialogOpen(true)
+  }
+
+  const handleViewDetail = (trx: any) => {
+    setSelectedTransaction(trx)
+    setIsDetailDialogOpen(true)
   }
 
   const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -3206,7 +3581,11 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
       const allTransactions = await refreshResponse.json()
       const formattedTransactions = allTransactions.map((trx: any) => ({
         id: trx.id,
+        kode: trx.kode || "-",
         namaSantri: trx.santri.nama,
+        nis: trx.santri.nis || "-",
+        kelas: trx.santri.kelas || "-",
+        asrama: trx.santri.asrama || "-",
         jenisLaundry: trx.jenisLaundry || "-",
         bulan: trx.bulan || "-",
         tahun: trx.tahun || "-",
@@ -3221,6 +3600,14 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
           month: "short",
           year: "numeric",
         }).format(new Date(trx.createdAt)),
+        keterangan: trx.keterangan || "-",
+        createdAt: trx.createdAt ? new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(new Date(trx.createdAt)) : "-",
         status: trx.status,
         _raw: trx,
       }))
@@ -3364,12 +3751,10 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID</TableHead>
+                <TableHead>Kode</TableHead>
                 <TableHead>Nama Santri</TableHead>
                 <TableHead>Jenis</TableHead>
-                <TableHead>Periode</TableHead>
                 <TableHead>Jumlah</TableHead>
-                <TableHead>Tanggal</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Aksi</TableHead>
               </TableRow>
@@ -3378,12 +3763,10 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
               {transactions.length > 0 ? (
                 transactions.map((trx) => (
                   <TableRow key={trx.id}>
-                    <TableCell>#{trx.id.slice(0, 8)}...</TableCell>
+                    <TableCell className="font-mono text-xs">{trx.kode}</TableCell>
                     <TableCell>{trx.namaSantri}</TableCell>
                     <TableCell>{trx.jenisLaundry}</TableCell>
-                    <TableCell>{trx.bulan} {trx.tahun}</TableCell>
                     <TableCell>{trx.jumlah}</TableCell>
-                    <TableCell>{trx.tanggal}</TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadgeColor(trx.status)}`}>
                         {trx.status}
@@ -3391,6 +3774,9 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => handleViewDetail(trx)}>
+                          <FileText className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(trx)}>
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -3403,7 +3789,7 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
                     Belum ada data transaksi laundry
                   </TableCell>
                 </TableRow>
@@ -3412,6 +3798,80 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
           </Table>
         </CardContent>
       </Card>
+
+      {/* Detail Dialog */}
+      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Detail Transaksi Laundry</DialogTitle>
+            <DialogDescription>
+              Informasi lengkap transaksi laundry.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedTransaction && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground">Kode Transaksi</Label>
+                  <p className="font-mono text-sm">{selectedTransaction.kode}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Status</Label>
+                  <p>
+                    <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadgeColor(selectedTransaction.status)}`}>
+                      {selectedTransaction.status}
+                    </span>
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Nama Santri</Label>
+                  <p>{selectedTransaction.namaSantri}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">NIS</Label>
+                  <p>{selectedTransaction.nis}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Kelas</Label>
+                  <p>{selectedTransaction.kelas}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Asrama</Label>
+                  <p>{selectedTransaction.asrama}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Jenis Laundry</Label>
+                  <p>{selectedTransaction.jenisLaundry}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Bulan</Label>
+                  <p>{selectedTransaction.bulan}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Tahun</Label>
+                  <p>{selectedTransaction.tahun}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Jumlah</Label>
+                  <p className="font-semibold">{selectedTransaction.jumlah}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Tanggal</Label>
+                  <p>{selectedTransaction.tanggal}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Dibuat</Label>
+                  <p className="text-xs">{selectedTransaction.createdAt}</p>
+                </div>
+                <div className="col-span-2">
+                  <Label className="text-muted-foreground">Keterangan</Label>
+                  <p className="text-sm">{selectedTransaction.keterangan}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
