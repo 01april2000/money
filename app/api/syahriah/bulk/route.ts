@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { santriIds, bulan, jumlah, status = "BELUM_BAYAR", keterangan } = body
+    const { santriIds, bulan, jumlah, status = "BELUM_BAYAR", keterangan, periodePembayaran, tahun } = body
 
     // Validate required fields
     if (!santriIds || !Array.isArray(santriIds) || santriIds.length === 0) {
@@ -43,6 +43,14 @@ export async function POST(request: NextRequest) {
     if (!bulan || !jumlah) {
       return NextResponse.json(
         { error: "Missing required fields: bulan, jumlah" },
+        { status: 400 }
+      )
+    }
+
+    // Validate periodePembayaran if provided
+    if (periodePembayaran && !["BULANAN", "TAHUNAN"].includes(periodePembayaran)) {
+      return NextResponse.json(
+        { error: "Invalid periodePembayaran. Must be 'BULANAN' or 'TAHUNAN'" },
         { status: 400 }
       )
     }
@@ -133,12 +141,15 @@ export async function POST(request: NextRequest) {
 
       // Create transaction
       try {
+        const tahunKode = tahun || new Date().getFullYear()
         const transaction = await prisma.transaksi.create({
           data: {
-            kode: `SYH-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+            kode: `SYH-${tahunKode}-${bulan}-${santri.nis}-${Date.now().toString().slice(-4)}`,
             santriId: santri.id,
             jenis: "SYAHRIAH",
             bulan: bulan,
+            periodePembayaran: periodePembayaran,
+            tahun: tahun ? parseInt(tahun) : null,
             jumlah: parseInt(jumlah.toString()),
             status: status,
             keterangan: keterangan,

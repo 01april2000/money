@@ -1906,6 +1906,8 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
     status: "BELUM_BAYAR",
     tanggalBayar: "",
     keterangan: "",
+    periodePembayaran: "",
+    tahun: "",
   })
   const [editFormData, setEditFormData] = React.useState({
     id: "",
@@ -1915,11 +1917,14 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
     status: "BELUM_BAYAR",
     tanggalBayar: "",
     keterangan: "",
+    periodePembayaran: "",
+    tahun: "",
   })
   const [generateFormData, setGenerateFormData] = React.useState({
     bulan: "",
     tahun: "",
     jumlah: "",
+    periodePembayaran: "",
   })
 
   // Fetch santri list on mount
@@ -1949,6 +1954,8 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
           ...formData,
           jumlah: parseInt(formData.jumlah),
           tanggalBayar: formData.tanggalBayar ? new Date(formData.tanggalBayar) : null,
+          periodePembayaran: formData.periodePembayaran || undefined,
+          tahun: formData.tahun ? parseInt(formData.tahun) : undefined,
         }),
       })
 
@@ -1990,6 +1997,8 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
         status: "BELUM_BAYAR",
         tanggalBayar: "",
         keterangan: "",
+        periodePembayaran: "",
+        tahun: "",
       })
       setIsAddDialogOpen(false)
     } catch (err) {
@@ -2055,6 +2064,8 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
           ...editFormData,
           jumlah: parseInt(editFormData.jumlah),
           tanggalBayar: editFormData.tanggalBayar ? new Date(editFormData.tanggalBayar) : null,
+          periodePembayaran: editFormData.periodePembayaran || undefined,
+          tahun: editFormData.tahun ? parseInt(editFormData.tahun) : undefined,
         }),
       })
 
@@ -2111,6 +2122,7 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
           bulan: generateFormData.bulan,
           tahun: parseInt(generateFormData.tahun),
           jumlah: parseInt(generateFormData.jumlah),
+          periodePembayaran: generateFormData.periodePembayaran || undefined,
         }),
       })
 
@@ -2149,6 +2161,7 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
         bulan: "",
         tahun: "",
         jumlah: "",
+        periodePembayaran: "",
       })
       setIsGenerateDialogOpen(false)
     } catch (err) {
@@ -2215,17 +2228,33 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
                       <option value="Desember">Desember</option>
                     </select>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="gen-tahun">Tahun</Label>
-                    <Input
-                      id="gen-tahun"
-                      name="tahun"
-                      type="number"
-                      value={generateFormData.tahun}
-                      onChange={(e) => setGenerateFormData(prev => ({ ...prev, tahun: e.target.value }))}
-                      placeholder="Contoh: 2024"
-                      required
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="gen-tahun">Tahun</Label>
+                      <Input
+                        id="gen-tahun"
+                        name="tahun"
+                        type="number"
+                        value={generateFormData.tahun}
+                        onChange={(e) => setGenerateFormData(prev => ({ ...prev, tahun: e.target.value }))}
+                        placeholder="Contoh: 2024"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="gen-periodePembayaran">Periode Pembayaran</Label>
+                      <select
+                        id="gen-periodePembayaran"
+                        name="periodePembayaran"
+                        value={generateFormData.periodePembayaran}
+                        onChange={(e) => setGenerateFormData(prev => ({ ...prev, periodePembayaran: e.target.value }))}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="">- Pilih Periode -</option>
+                        <option value="BULANAN">Bulanan</option>
+                        <option value="TAHUNAN">Tahunan</option>
+                      </select>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="gen-jumlah">Jumlah</Label>
@@ -2311,13 +2340,13 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="bulan">Bulan</Label>
+                    <Label htmlFor="bulan">Bulan/Periode</Label>
                     <Input
                       id="bulan"
                       name="bulan"
                       value={formData.bulan}
                       onChange={handleInputChange}
-                      placeholder="Contoh: Januari 2024"
+                      placeholder="Contoh: Januari atau Tahunan"
                       required
                     />
                   </div>
@@ -2332,6 +2361,33 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
                       placeholder="Contoh: 300000"
                       required
                     />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="periodePembayaran">Periode Pembayaran</Label>
+                      <select
+                        id="periodePembayaran"
+                        name="periodePembayaran"
+                        value={formData.periodePembayaran}
+                        onChange={handleInputChange}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="">- Pilih Periode -</option>
+                        <option value="BULANAN">Bulanan</option>
+                        <option value="TAHUNAN">Tahunan</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="tahun">Tahun</Label>
+                      <Input
+                        id="tahun"
+                        name="tahun"
+                        type="number"
+                        value={formData.tahun}
+                        onChange={handleInputChange}
+                        placeholder="Contoh: 2024"
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="status">Status</Label>
@@ -2466,13 +2522,13 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
                 </select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-bulan">Bulan</Label>
+                <Label htmlFor="edit-bulan">Bulan/Periode</Label>
                 <Input
                   id="edit-bulan"
                   name="bulan"
                   value={editFormData.bulan}
                   onChange={handleEditInputChange}
-                  placeholder="Contoh: Januari 2024"
+                  placeholder="Contoh: Januari atau Tahunan"
                   required
                 />
               </div>
@@ -2487,6 +2543,33 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
                   placeholder="Contoh: 300000"
                   required
                 />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-periodePembayaran">Periode Pembayaran</Label>
+                  <select
+                    id="edit-periodePembayaran"
+                    name="periodePembayaran"
+                    value={editFormData.periodePembayaran}
+                    onChange={handleEditInputChange}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="">- Pilih Periode -</option>
+                    <option value="BULANAN">Bulanan</option>
+                    <option value="TAHUNAN">Tahunan</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-tahun">Tahun</Label>
+                  <Input
+                    id="edit-tahun"
+                    name="tahun"
+                    type="number"
+                    value={editFormData.tahun}
+                    onChange={handleEditInputChange}
+                    placeholder="Contoh: 2024"
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-status">Status</Label>

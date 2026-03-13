@@ -47,6 +47,11 @@ enum JenisBeasiswa {
   UANG_SAKU
 }
 
+enum PeriodePembayaran {
+  BULANAN
+  TAHUNAN
+}
+
 enum StatusSantri {
   AKTIF
   NON_AKTIF
@@ -143,24 +148,28 @@ model Santri {
 }
 
 model Transaksi {
-  id              String          @id @default(cuid())
-  kode            String          @unique
-  santriId        String
-  santri          Santri          @relation(fields: [santriId], references: [id], onDelete: Cascade)
-  jenis           JenisTransaksi
-  bulan           String?
-  jumlah          Int
-  tanggalBayar    DateTime?
-  status          StatusTransaksi @default(BELUM_BAYAR)
-  statusUangSaku  StatusUangSaku?
-  jenisLaundry    String?
-  keterangan      String?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  id                String              @id @default(cuid())
+  kode              String              @unique
+  santriId          String
+  santri            Santri              @relation(fields: [santriId], references: [id], onDelete: Cascade)
+  jenis             JenisTransaksi
+  bulan             String?
+  periodePembayaran PeriodePembayaran?
+  tahun             Int?
+  jumlah            Int
+  tanggalBayar      DateTime?
+  status            StatusTransaksi     @default(BELUM_BAYAR)
+  statusUangSaku    StatusUangSaku?
+  jenisLaundry      String?
+  keterangan        String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
 
   @@index([santriId])
   @@index([jenis])
   @@index([status])
   @@index([createdAt])
+  @@index([periodePembayaran])
+  @@index([tahun])
   @@map("transaksi")
 }

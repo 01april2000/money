@@ -61,6 +61,8 @@ export function BulkSyahriahDialog({ open, onOpenChange, onSuccess }: BulkSyahri
   const [jumlah, setJumlah] = React.useState("")
   const [keterangan, setKeterangan] = React.useState("")
   const [searchQuery, setSearchQuery] = React.useState("")
+  const [periodePembayaran, setPeriodePembayaran] = React.useState<"BULANAN" | "TAHUNAN" | "">("")
+  const [tahun, setTahun] = React.useState("")
   const [bulkResult, setBulkResult] = React.useState<BulkResponse | null>(null)
 
   // Fetch santri data when dialog opens
@@ -159,6 +161,8 @@ export function BulkSyahriahDialog({ open, onOpenChange, onSuccess }: BulkSyahri
           bulan,
           jumlah: parseInt(jumlah),
           keterangan: keterangan || undefined,
+          periodePembayaran: periodePembayaran || undefined,
+          tahun: tahun ? parseInt(tahun) : undefined,
         }),
       })
 
@@ -192,6 +196,8 @@ export function BulkSyahriahDialog({ open, onOpenChange, onSuccess }: BulkSyahri
       setBulan("")
       setJumlah("")
       setKeterangan("")
+      setPeriodePembayaran("")
+      setTahun("")
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Gagal membuat tagihan")
       console.error(error)
@@ -207,6 +213,8 @@ export function BulkSyahriahDialog({ open, onOpenChange, onSuccess }: BulkSyahri
       setBulan("")
       setJumlah("")
       setKeterangan("")
+      setPeriodePembayaran("")
+      setTahun("")
       setBulkResult(null)
       setSearchQuery("")
       onOpenChange(false)
@@ -247,12 +255,12 @@ export function BulkSyahriahDialog({ open, onOpenChange, onSuccess }: BulkSyahri
             {/* Form */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="bulan">Bulan *</Label>
+                <Label htmlFor="bulan">Bulan/Periode *</Label>
                 <Input
                   id="bulan"
                   value={bulan}
                   onChange={(e) => setBulan(e.target.value)}
-                  placeholder="Contoh: Januari 2024"
+                  placeholder="Contoh: Januari atau Tahunan"
                   disabled={submitting}
                 />
               </div>
@@ -264,6 +272,33 @@ export function BulkSyahriahDialog({ open, onOpenChange, onSuccess }: BulkSyahri
                   value={jumlah}
                   onChange={(e) => setJumlah(e.target.value)}
                   placeholder="Contoh: 500000"
+                  disabled={submitting}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="periodePembayaran">Periode Pembayaran</Label>
+                <select
+                  id="periodePembayaran"
+                  value={periodePembayaran}
+                  onChange={(e) => setPeriodePembayaran(e.target.value as "BULANAN" | "TAHUNAN" | "")}
+                  disabled={submitting}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="">- Pilih Periode -</option>
+                  <option value="BULANAN">Bulanan</option>
+                  <option value="TAHUNAN">Tahunan</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tahun">Tahun</Label>
+                <Input
+                  id="tahun"
+                  type="number"
+                  value={tahun}
+                  onChange={(e) => setTahun(e.target.value)}
+                  placeholder="Contoh: 2024"
                   disabled={submitting}
                 />
               </div>

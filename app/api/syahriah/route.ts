@@ -13,6 +13,8 @@ export async function GET(request: NextRequest) {
     const santriId = searchParams.get("santriId")
     const status = searchParams.get("status")
     const bulan = searchParams.get("bulan")
+    const periodePembayaran = searchParams.get("periodePembayaran")
+    const tahun = searchParams.get("tahun")
 
     const where: any = {
       jenis: "SYAHRIAH",
@@ -28,6 +30,14 @@ export async function GET(request: NextRequest) {
 
     if (bulan) {
       where.bulan = bulan
+    }
+
+    if (periodePembayaran) {
+      where.periodePembayaran = periodePembayaran
+    }
+
+    if (tahun) {
+      where.tahun = parseInt(tahun)
     }
 
     const syahriahTransactions = await prisma.transaksi.findMany({
@@ -77,12 +87,20 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { santriId, bulan, jumlah, status, tanggalBayar, keterangan } = body
+    const { santriId, bulan, jumlah, status, tanggalBayar, keterangan, periodePembayaran, tahun } = body
 
     // Validate required fields
     if (!santriId || !bulan || !jumlah) {
       return NextResponse.json(
         { error: "Missing required fields: santriId, bulan, jumlah" },
+        { status: 400 }
+      )
+    }
+
+    // Validate periodePembayaran if provided
+    if (periodePembayaran && !["BULANAN", "TAHUNAN"].includes(periodePembayaran)) {
+      return NextResponse.json(
+        { error: "Invalid periodePembayaran. Must be 'BULANAN' or 'TAHUNAN'" },
         { status: 400 }
       )
     }
@@ -116,7 +134,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate unique transaction code
-    const kode = `SYAH-${new Date().getFullYear()}-${bulan}-${santri.nis}-${Date.now().toString().slice(-4)}`
+    const tahunKode = tahun || new Date().getFullYear()
+    const kode = `SYAH-${tahunKode}-${bulan}-${santri.nis}-${Date.now().toString().slice(-4)}`
 
     // Create Syahriah transaction
     const syahriahTransaction = await prisma.transaksi.create({
@@ -125,6 +144,8 @@ export async function POST(request: NextRequest) {
         santriId,
         jenis: "SYAHRIAH",
         bulan,
+        periodePembayaran,
+        tahun: tahun ? parseInt(tahun) : null,
         jumlah: parseInt(jumlah),
         status: status || "BELUM_BAYAR",
         tanggalBayar: tanggalBayar ? new Date(tanggalBayar) : null,
