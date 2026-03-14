@@ -333,6 +333,8 @@ export default async function AdminPage() {
       wali: s.wali,
       status: s.status,
       email: s.user?.email || "",
+      beasiswa: s.beasiswa,
+      jenisBeasiswa: s.jenisBeasiswa,
     })),
     sppTransactions: sppTransactions.map((trx) => ({
       id: trx.id,

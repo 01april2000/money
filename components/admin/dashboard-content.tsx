@@ -73,6 +73,8 @@ interface DashboardContentProps {
       wali: string
       status: string
       email: string
+      beasiswa?: boolean
+      jenisBeasiswa?: string
     }>
     sppTransactions?: Array<{
       id: string
@@ -772,6 +774,8 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
     status: "AKTIF",
     email: "",
     password: "",
+    beasiswa: false,
+    jenisBeasiswa: "",
   })
   const [editFormData, setEditFormData] = React.useState({
     id: "",
@@ -783,6 +787,8 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
     status: "AKTIF",
     email: "",
     password: "",
+    beasiswa: false,
+    jenisBeasiswa: "",
   })
   const [searchQuery, setSearchQuery] = React.useState("")
 
@@ -819,7 +825,7 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
 
       toast.success("Santri berhasil ditambahkan!")
       setSantri(prev => [newSantri, ...prev])
-      setFormData({ nis: "", nama: "", kelas: "", asrama: "", wali: "", status: "AKTIF", email: "", password: "" })
+      setFormData({ nis: "", nama: "", kelas: "", asrama: "", wali: "", status: "AKTIF", email: "", password: "", beasiswa: false, jenisBeasiswa: "" })
       setIsAddDialogOpen(false)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Terjadi kesalahan")
@@ -852,7 +858,7 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
     )
   }
 
-  const handleEdit = (s: { id: string; nis: string; nama: string; kelas: string; asrama: string; wali: string; status: string; email?: string }) => {
+  const handleEdit = (s: { id: string; nis: string; nama: string; kelas: string; asrama: string; wali: string; status: string; email?: string; beasiswa?: boolean; jenisBeasiswa?: string }) => {
     setEditFormData({
       id: s.id,
       nis: s.nis,
@@ -863,6 +869,8 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
       status: s.status,
       email: s.email || "",
       password: "",
+      beasiswa: s.beasiswa || false,
+      jenisBeasiswa: s.jenisBeasiswa || "",
     })
     setIsEditDialogOpen(true)
   }
@@ -927,6 +935,8 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
             status: String(row.status || row.Status || row["Status"] || "AKTIF").toUpperCase(),
             email: String(row.email || row.Email || row["Email"] || ""),
             password: String(row.password || row.Password || row["Password"] || "123456"),
+            beasiswa: Boolean(row.beasiswa || row.Beasiswa || row["Beasiswa"] || false),
+            jenisBeasiswa: String(row.jenisBeasiswa || row.JenisBeasiswa || row["Jenis_Beasiswa"] || row["Jenis Beasiswa"] || ""),
           })).filter(item => item.nis && item.nama && item.kelas && item.asrama && item.wali && item.email)
 
           setParsedData(validData)
@@ -994,6 +1004,8 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
         Status: "AKTIF",
         Email: "contoh@email.com",
         Password: "123456",
+        Beasiswa: false,
+        Jenis_Beasiswa: "",
       },
     ]
     const worksheet = XLSX.utils.json_to_sheet(template)
@@ -1150,6 +1162,38 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
                       <option value="KELUAR">Keluar</option>
                     </select>
                   </div>
+                  <div className="grid gap-2">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="beasiswa"
+                        name="beasiswa"
+                        checked={formData.beasiswa}
+                        onChange={(e) => setFormData(prev => ({ ...prev, beasiswa: e.target.checked, jenisBeasiswa: e.target.checked ? prev.jenisBeasiswa : "" }))}
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <Label htmlFor="beasiswa" className="cursor-pointer">Beasiswa</Label>
+                    </div>
+                  </div>
+                  {formData.beasiswa && (
+                    <div className="grid gap-2">
+                      <Label htmlFor="jenisBeasiswa">Jenis Beasiswa</Label>
+                      <select
+                        id="jenisBeasiswa"
+                        name="jenisBeasiswa"
+                        value={formData.jenisBeasiswa}
+                        onChange={handleInputChange}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        required
+                      >
+                        <option value="">Pilih Jenis Beasiswa</option>
+                        <option value="FULL">Full</option>
+                        <option value="SYAHRIAH">Syahriah</option>
+                        <option value="SPP">SPP</option>
+                        <option value="UANG_SAKU">Uang Saku</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
@@ -1186,7 +1230,7 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
                     {excelFile ? excelFile.name : "Pilih file Excel"}
                   </p>
                   <p className="text-xs text-muted-foreground mb-4">
-                    Format file: .xlsx dengan kolom NIS, Nama, Kelas, Nomer_Kamar, Wali, Status, Email, Password
+                    Format file: .xlsx dengan kolom NIS, Nama, Kelas, Nomer_Kamar, Wali, Status, Email, Password, Beasiswa (opsional), Jenis_Beasiswa (opsional)
                   </p>
                   <input
                     type="file"
@@ -1373,6 +1417,38 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
                     <option value="KELUAR">Keluar</option>
                   </select>
                 </div>
+                <div className="grid gap-2">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="edit-beasiswa"
+                      name="beasiswa"
+                      checked={editFormData.beasiswa}
+                      onChange={(e) => setEditFormData(prev => ({ ...prev, beasiswa: e.target.checked, jenisBeasiswa: e.target.checked ? prev.jenisBeasiswa : "" }))}
+                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <Label htmlFor="edit-beasiswa" className="cursor-pointer">Beasiswa</Label>
+                  </div>
+                </div>
+                {editFormData.beasiswa && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-jenisBeasiswa">Jenis Beasiswa</Label>
+                    <select
+                      id="edit-jenisBeasiswa"
+                      name="jenisBeasiswa"
+                      value={editFormData.jenisBeasiswa}
+                      onChange={handleEditInputChange}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      required
+                    >
+                      <option value="">Pilih Jenis Beasiswa</option>
+                      <option value="FULL">Full</option>
+                      <option value="SYAHRIAH">Syahriah</option>
+                      <option value="SPP">SPP</option>
+                      <option value="UANG_SAKU">Uang Saku</option>
+                    </select>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
@@ -1413,6 +1489,7 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
                 <TableHead>Nomer Kamar</TableHead>
                 <TableHead>Wali</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Beasiswa</TableHead>
                 <TableHead>Aksi</TableHead>
               </TableRow>
             </TableHeader>
@@ -1429,6 +1506,15 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
                       <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadgeColor(s.status)}`}>
                         {s.status}
                       </span>
+                    </TableCell>
+                    <TableCell>
+                      {s.beasiswa ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-700">
+                          {s.jenisBeasiswa || "Beasiswa"}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">-</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
@@ -1449,7 +1535,7 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground">
                     {searchQuery ? "Tidak ada santri yang cocok" : "Belum ada data santri"}
                   </TableCell>
                 </TableRow>
