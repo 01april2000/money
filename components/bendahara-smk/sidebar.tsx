@@ -13,7 +13,8 @@ import {
   ChevronRight,
   ChevronDown,
   LayoutDashboard,
-  LogOut
+  LogOut,
+  GraduationCap
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -49,6 +50,11 @@ export const menuItems: MenuItem[] = [
         id: "syahriah",
         label: "Syahriah",
         icon: <Receipt className="h-4 w-4" />
+      },
+      {
+        id: "ujian",
+        label: "Ujian",
+        icon: <GraduationCap className="h-4 w-4" />
       }
     ]
   },

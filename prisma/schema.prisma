@@ -26,6 +26,7 @@ enum JenisTransaksi {
   SYAHRIAH
   UANG_SAKU
   LAUNDRY
+  UJIAN
 }
 
 enum StatusTransaksi {

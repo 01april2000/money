@@ -2,7 +2,7 @@ import { redirect } from "next/navigation"
 import { headers } from "next/headers"
 import Link from "next/link"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
+import { prisma, JenisTransaksi } from "@/lib/prisma"
 import { DashboardLayout } from "@/components/bendahara-smk/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -162,10 +162,10 @@ async function getSantri() {
 }
 
 // Fetch transactions by type for SMK
-async function getTransactionsByType(jenis: string) {
+async function getTransactionsByType(jenis: JenisTransaksi) {
   return await prisma.transaksi.findMany({
     where: {
-      jenis: jenis as any,
+      jenis,
       santri: {
         jenisSantri: "SMK"
       },
@@ -329,13 +329,15 @@ export default async function BendaharaSmkPage() {
     santri,
     sppTransactions,
     syahriahTransactions,
+    ujianTransactions,
     financialSummary,
   ] = await Promise.all([
     getDashboardStats(),
     getRecentTransactions(),
     getSantri(),
-    getTransactionsByType("SPP"),
-    getTransactionsByType("SYAHRIAH"),
+    getTransactionsByType(JenisTransaksi.SPP),
+    getTransactionsByType(JenisTransaksi.SYAHRIAH),
+    getTransactionsByType(JenisTransaksi.UJIAN),
     getFinancialSummary(),
   ])
 
@@ -397,6 +399,21 @@ export default async function BendaharaSmkPage() {
       asrama: trx.santri.asrama,
       bulan: trx.bulan,
       periodePembayaran: trx.periodePembayaran,
+      tahun: trx.tahun?.toString() || "-",
+      jumlah: formatCurrency(trx.jumlah),
+      tanggalBayar: formatDate(trx.tanggalBayar),
+      keterangan: trx.keterangan || "-",
+      createdAt: formatDate(trx.createdAt),
+      status: trx.status,
+      _raw: trx,
+    })),
+    ujianTransactions: ujianTransactions.map((trx) => ({
+      id: trx.id,
+      kode: trx.kode,
+      namaSantri: trx.santri.nama,
+      nis: trx.santri.nis,
+      kelas: trx.santri.kelas,
+      asrama: trx.santri.asrama,
       tahun: trx.tahun?.toString() || "-",
       jumlah: formatCurrency(trx.jumlah),
       tanggalBayar: formatDate(trx.tanggalBayar),

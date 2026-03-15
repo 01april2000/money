@@ -102,6 +102,21 @@ interface DashboardContentProps {
       status: string
       _raw?: any
     }>
+    ujianTransactions?: Array<{
+      id: string
+      kode: string
+      namaSantri: string
+      nis: string
+      kelas: string
+      asrama: string
+      tahun: string
+      jumlah: string
+      tanggalBayar: string
+      keterangan: string
+      createdAt: string
+      status: string
+      _raw?: any
+    }>
     financialSummary?: {
       totalIncome: string
       monthlyIncome: Record<string, number>
@@ -163,6 +178,8 @@ export function DashboardContent({ activeItem, dashboardData }: DashboardContent
       return <SPPManagement dashboardData={dashboardData} />
     case "syahriah":
       return <SyahriahManagement dashboardData={dashboardData} />
+    case "ujian":
+      return <UjianManagement dashboardData={dashboardData} />
     case "keuangan":
       return <Keuangan dashboardData={dashboardData} />
     default:
@@ -1324,6 +1341,661 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
         onOpenChange={setIsGenerateDialogOpen}
         onSuccess={handleGenerateSuccess}
       />
+    </div>
+  )
+}
+
+// Ujian Management
+function UjianManagement({ dashboardData }: { dashboardData?: DashboardContentProps["dashboardData"] }) {
+  const initialTransactions = dashboardData?.ujianTransactions || []
+  const [transactions, setTransactions] = React.useState(initialTransactions)
+  const [searchTerm, setSearchTerm] = React.useState("")
+  const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false)
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = React.useState(false)
+  const [selectedTransaction, setSelectedTransaction] = React.useState<any>(null)
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [santriList, setSantriList] = React.useState<any[]>([])
+  const [formData, setFormData] = React.useState({
+    santriId: "",
+    tahun: "",
+    jumlah: "",
+    status: "BELUM_BAYAR",
+    tanggalBayar: "",
+    keterangan: "",
+  })
+  const [editFormData, setEditFormData] = React.useState({
+    id: "",
+    santriId: "",
+    tahun: "",
+    jumlah: "",
+    status: "BELUM_BAYAR",
+    tanggalBayar: "",
+    keterangan: "",
+  })
+
+  // Fetch santri list on mount
+  React.useEffect(() => {
+    fetch("/api/santri")
+      .then(res => res.json())
+      .then(data => setSantriList(data.filter((s: any) => s.jenisSantri === "SMK")))
+      .catch(err => console.error("Failed to fetch santri:", err))
+  }, [])
+
+  const filteredTransactions = transactions.filter((trx) =>
+    trx.namaSantri.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    trx.nis.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    trx.kode.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch("/api/ujian", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...formData,
+          jumlah: parseInt(formData.jumlah),
+          tanggalBayar: formData.tanggalBayar ? new Date(formData.tanggalBayar) : null,
+        }),
+      })
+
+      const newTrx = await response.json()
+
+      if (!response.ok) {
+        throw new Error(newTrx.error || "Failed to create UJIAN transaction")
+      }
+
+      toast.success("Transaksi UJIAN berhasil ditambahkan!")
+      
+      // Refresh transactions
+      const refreshResponse = await fetch("/api/ujian")
+      const allTransactions = await refreshResponse.json()
+      const formattedTransactions = allTransactions.map((trx: any) => ({
+        id: trx.id,
+        kode: trx.kode || "-",
+        namaSantri: trx.santri.nama,
+        nis: trx.santri.nis || "-",
+        kelas: trx.santri.kelas || "-",
+        asrama: trx.santri.asrama || "-",
+        tahun: trx.tahun?.toString() || "-",
+        jumlah: new Intl.NumberFormat("id-ID", {
+          style: "currency",
+          currency: "IDR",
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }).format(trx.jumlah),
+        tanggalBayar: trx.tanggalBayar ? new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }).format(new Date(trx.tanggalBayar)) : "-",
+        keterangan: trx.keterangan || "-",
+        createdAt: trx.createdAt ? new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(new Date(trx.createdAt)) : "-",
+        status: trx.status,
+        _raw: trx,
+      }))
+      setTransactions(formattedTransactions.filter((t: any) => t._raw.santri?.jenisSantri === "SMK"))
+      
+      setFormData({
+        santriId: "",
+        tahun: "",
+        jumlah: "",
+        status: "BELUM_BAYAR",
+        tanggalBayar: "",
+        keterangan: "",
+      })
+      setIsAddDialogOpen(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Terjadi kesalahan")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDelete = async (trxId: string) => {
+    toast.promise(
+      async () => {
+        const response = await fetch(`/api/ujian/${trxId}`, {
+          method: "DELETE",
+        })
+
+        if (!response.ok) {
+          throw new Error("Gagal menghapus transaksi UJIAN")
+        }
+
+        return response.json()
+      },
+      {
+        loading: "Menghapus transaksi...",
+        success: () => {
+          setTransactions(prev => prev.filter(t => t.id !== trxId))
+          return "Transaksi UJIAN berhasil dihapus!"
+        },
+        error: "Gagal menghapus transaksi UJIAN",
+      }
+    )
+  }
+
+  const handleEdit = (trx: any) => {
+    setEditFormData({
+      id: trx.id,
+      santriId: trx._raw.santriId,
+      tahun: trx._raw.tahun?.toString() || "",
+      jumlah: String(trx._raw.jumlah),
+      status: trx._raw.status,
+      tanggalBayar: trx._raw.tanggalBayar ? new Date(trx._raw.tanggalBayar).toISOString().split('T')[0] : "",
+      keterangan: trx._raw.keterangan || "",
+    })
+    setIsEditDialogOpen(true)
+  }
+
+  const handleViewDetail = (trx: any) => {
+    setSelectedTransaction(trx)
+    setIsDetailDialogOpen(true)
+  }
+
+  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setEditFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch(`/api/ujian/${editFormData.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...editFormData,
+          jumlah: parseInt(editFormData.jumlah),
+          tanggalBayar: editFormData.tanggalBayar ? new Date(editFormData.tanggalBayar) : null,
+        }),
+      })
+
+      const updatedTrx = await response.json()
+
+      if (!response.ok) {
+        throw new Error(updatedTrx.error || "Failed to update UJIAN transaction")
+      }
+
+      toast.success("Transaksi UJIAN berhasil diperbarui!")
+      
+      // Refresh transactions
+      const refreshResponse = await fetch("/api/ujian")
+      const allTransactions = await refreshResponse.json()
+      const formattedTransactions = allTransactions.map((trx: any) => ({
+        id: trx.id,
+        kode: trx.kode || "-",
+        namaSantri: trx.santri.nama,
+        nis: trx.santri.nis || "-",
+        kelas: trx.santri.kelas || "-",
+        asrama: trx.santri.asrama || "-",
+        tahun: trx.tahun?.toString() || "-",
+        jumlah: new Intl.NumberFormat("id-ID", {
+          style: "currency",
+          currency: "IDR",
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }).format(trx.jumlah),
+        tanggalBayar: trx.tanggalBayar ? new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }).format(new Date(trx.tanggalBayar)) : "-",
+        keterangan: trx.keterangan || "-",
+        createdAt: trx.createdAt ? new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(new Date(trx.createdAt)) : "-",
+        status: trx.status,
+        _raw: trx,
+      }))
+      setTransactions(formattedTransactions.filter((t: any) => t._raw.santri?.jenisSantri === "SMK"))
+      
+      setIsEditDialogOpen(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Terjadi kesalahan")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleUpdateStatus = async (id: string, newStatus: string) => {
+    try {
+      const response = await fetch(`/api/ujian/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      })
+
+      if (!response.ok) throw new Error("Gagal mengupdate status")
+
+      toast.success("Status berhasil diupdate")
+      
+      // Refresh transactions
+      const refreshResponse = await fetch("/api/ujian")
+      const allTransactions = await refreshResponse.json()
+      const formattedTransactions = allTransactions.map((trx: any) => ({
+        id: trx.id,
+        kode: trx.kode || "-",
+        namaSantri: trx.santri.nama,
+        nis: trx.santri.nis || "-",
+        kelas: trx.santri.kelas || "-",
+        asrama: trx.santri.asrama || "-",
+        tahun: trx.tahun?.toString() || "-",
+        jumlah: new Intl.NumberFormat("id-ID", {
+          style: "currency",
+          currency: "IDR",
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }).format(trx.jumlah),
+        tanggalBayar: trx.tanggalBayar ? new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }).format(new Date(trx.tanggalBayar)) : "-",
+        keterangan: trx.keterangan || "-",
+        createdAt: trx.createdAt ? new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(new Date(trx.createdAt)) : "-",
+        status: trx.status,
+        _raw: trx,
+      }))
+      setTransactions(formattedTransactions.filter((t: any) => t._raw.santri?.jenisSantri === "SMK"))
+    } catch (error) {
+      toast.error("Gagal mengupdate status")
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Pembayaran Ujian</h1>
+          <p className="text-muted-foreground">Kelola pembayaran ujian santri SMK</p>
+        </div>
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Tambah Transaksi
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Tambah Transaksi Ujian</DialogTitle>
+              <DialogDescription>
+                Tambah transaksi pembayaran ujian baru untuk santri SMK
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit}>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="santriId">Santri</Label>
+                  <select
+                    id="santriId"
+                    name="santriId"
+                    value={formData.santriId}
+                    onChange={handleInputChange}
+                    required
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <option value="">Pilih Santri</option>
+                    {santriList.map((santri) => (
+                      <option key={santri.id} value={santri.id}>
+                        {santri.nama} - {santri.nis} - {santri.kelas}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="tahun">Tahun</Label>
+                  <Input
+                    id="tahun"
+                    name="tahun"
+                    type="number"
+                    value={formData.tahun}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="2024"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="jumlah">Jumlah (Rp)</Label>
+                  <Input
+                    id="jumlah"
+                    name="jumlah"
+                    type="number"
+                    value={formData.jumlah}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="0"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="status">Status</Label>
+                  <select
+                    id="status"
+                    name="status"
+                    value={formData.status}
+                    onChange={handleInputChange}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <option value="BELUM_BAYAR">Belum Bayar</option>
+                    <option value="PENDING">Pending</option>
+                    <option value="LUNAS">Lunas</option>
+                  </select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="tanggalBayar">Tanggal Bayar</Label>
+                  <Input
+                    id="tanggalBayar"
+                    name="tanggalBayar"
+                    type="date"
+                    value={formData.tanggalBayar}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="keterangan">Keterangan</Label>
+                  <Input
+                    id="keterangan"
+                    name="keterangan"
+                    value={formData.keterangan}
+                    onChange={handleInputChange}
+                    placeholder="Keterangan tambahan"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                  Batal
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Menyimpan..." : "Simpan"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Search */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Cari berdasarkan nama, NIS, atau kode transaksi..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
+
+      {/* Table */}
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Kode</TableHead>
+                <TableHead>Nama Santri</TableHead>
+                <TableHead>Tahun</TableHead>
+                <TableHead>Jumlah</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Tanggal Bayar</TableHead>
+                <TableHead className="text-right">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredTransactions.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                    Belum ada transaksi ujian
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredTransactions.map((trx) => (
+                  <TableRow key={trx.id}>
+                    <TableCell className="font-mono text-xs">{trx.kode}</TableCell>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{trx.namaSantri}</div>
+                        <div className="text-xs text-muted-foreground">{trx.nis} - {trx.kelas}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>{trx.tahun}</TableCell>
+                    <TableCell className="font-medium">{trx.jumlah}</TableCell>
+                    <TableCell>
+                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(trx.status)}`}>
+                        {getStatusIcon(trx.status)}
+                        {trx.status}
+                      </span>
+                    </TableCell>
+                    <TableCell>{trx.tanggalBayar}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewDetail(trx)}
+                        >
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(trx)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(trx.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit Transaksi Ujian</DialogTitle>
+            <DialogDescription>
+              Edit transaksi pembayaran ujian
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit}>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-santriId">Santri</Label>
+                <select
+                  id="edit-santriId"
+                  name="santriId"
+                  value={editFormData.santriId}
+                  onChange={handleEditInputChange}
+                  required
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <option value="">Pilih Santri</option>
+                  {santriList.map((santri) => (
+                    <option key={santri.id} value={santri.id}>
+                      {santri.nama} - {santri.nis} - {santri.kelas}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-tahun">Tahun</Label>
+                <Input
+                  id="edit-tahun"
+                  name="tahun"
+                  type="number"
+                  value={editFormData.tahun}
+                  onChange={handleEditInputChange}
+                  required
+                  placeholder="2024"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-jumlah">Jumlah (Rp)</Label>
+                <Input
+                  id="edit-jumlah"
+                  name="jumlah"
+                  type="number"
+                  value={editFormData.jumlah}
+                  onChange={handleEditInputChange}
+                  required
+                  placeholder="0"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-status">Status</Label>
+                <select
+                  id="edit-status"
+                  name="status"
+                  value={editFormData.status}
+                  onChange={handleEditInputChange}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <option value="BELUM_BAYAR">Belum Bayar</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="LUNAS">Lunas</option>
+                </select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-tanggalBayar">Tanggal Bayar</Label>
+                <Input
+                  id="edit-tanggalBayar"
+                  name="tanggalBayar"
+                  type="date"
+                  value={editFormData.tanggalBayar}
+                  onChange={handleEditInputChange}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-keterangan">Keterangan</Label>
+                <Input
+                  id="edit-keterangan"
+                  name="keterangan"
+                  value={editFormData.keterangan}
+                  onChange={handleEditInputChange}
+                  placeholder="Keterangan tambahan"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Menyimpan..." : "Simpan Perubahan"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detail Dialog */}
+      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Detail Transaksi Ujian</DialogTitle>
+          </DialogHeader>
+          {selectedTransaction && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Kode</p>
+                  <p className="font-mono text-sm">{selectedTransaction.kode}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Status</p>
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(selectedTransaction.status)}`}>
+                    {getStatusIcon(selectedTransaction.status)}
+                    {selectedTransaction.status}
+                  </span>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Nama Santri</p>
+                <p className="font-medium">{selectedTransaction.namaSantri}</p>
+                <p className="text-sm text-muted-foreground">{selectedTransaction.nis} - {selectedTransaction.kelas} - {selectedTransaction.asrama}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Tahun</p>
+                  <p className="font-medium">{selectedTransaction.tahun}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Jumlah</p>
+                  <p className="font-medium">{selectedTransaction.jumlah}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Tanggal Bayar</p>
+                  <p>{selectedTransaction.tanggalBayar}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Dibuat Pada</p>
+                  <p>{selectedTransaction.createdAt}</p>
+                </div>
+              </div>
+              {selectedTransaction.keterangan && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Keterangan</p>
+                  <p>{selectedTransaction.keterangan}</p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setIsDetailDialogOpen(false)}>
+              Tutup
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
