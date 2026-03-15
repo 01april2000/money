@@ -33,6 +33,7 @@ import {
 } from "lucide-react"
 import { BulkSyahriahDialog } from "@/components/bendahara-smk/bulk-syahriah-dialog"
 import { GenerateMonthlySyahriahDialog } from "@/components/bendahara-smk/generate-monthly-syahriah-dialog"
+import { AddSyahriahDialog } from "@/components/bendahara-smk/add-syahriah-dialog"
 
 interface DashboardContentProps {
   activeItem: string
@@ -1067,6 +1068,7 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
   const [searchTerm, setSearchTerm] = React.useState("")
   const [selectedTransaction, setSelectedTransaction] = React.useState<any>(null)
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
+  const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false)
   const [isBulkDialogOpen, setIsBulkDialogOpen] = React.useState(false)
   const [isGenerateDialogOpen, setIsGenerateDialogOpen] = React.useState(false)
   const [refreshKey, setRefreshKey] = React.useState(0)
@@ -1121,6 +1123,10 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
     setRefreshKey(prev => prev + 1)
   }
 
+  const handleAddSuccess = () => {
+    setRefreshKey(prev => prev + 1)
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -1130,6 +1136,12 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
         </div>
         <div className="flex gap-2">
           <Button
+            onClick={() => setIsAddDialogOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Tambah Tagihan
+          </Button>
+          <Button
             variant="outline"
             onClick={() => setIsBulkDialogOpen(true)}
           >
@@ -1137,6 +1149,7 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
             Bulk Tagihan
           </Button>
           <Button
+            variant="outline"
             onClick={() => setIsGenerateDialogOpen(true)}
           >
             <Sparkles className="h-4 w-4 mr-2" />
@@ -1293,6 +1306,12 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
           )}
         </DialogContent>
       </Dialog>
+
+      <AddSyahriahDialog
+        open={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+        onSuccess={handleAddSuccess}
+      />
 
       <BulkSyahriahDialog
         open={isBulkDialogOpen}
