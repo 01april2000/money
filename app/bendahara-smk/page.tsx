@@ -3,13 +3,13 @@ import { headers } from "next/headers"
 import Link from "next/link"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { DashboardLayout } from "@/components/admin/dashboard-layout"
+import { DashboardLayout } from "@/components/bendahara-smk/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ShieldAlert } from "lucide-react"
 
-// Define allowed roles for admin access
-const ADMIN_ROLES = ["ADMIN"]
+// Define allowed roles for Bendahara SMK access
+const BENDAHARA_SMK_ROLES = ["ADMIN", "BENDAHARA_SMK"]
 
 // Helper function to format currency
 function formatCurrency(amount: number): string {
@@ -35,94 +35,133 @@ function formatDate(date: Date | null): string {
 function getStatusBadgeColor(status: string): string {
   switch (status) {
     case "LUNAS":
-      return "bg-green-100 text-green-700"
+      return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
     case "PENDING":
-      return "bg-yellow-100 text-yellow-700"
+      return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
     case "BELUM_BAYAR":
-      return "bg-red-100 text-red-700"
+      return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
     case "DITOLAK":
-      return "bg-red-100 text-red-700"
+      return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
     case "DITAMBAH":
-      return "bg-green-100 text-green-700"
+      return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
     case "DIAMBIL":
-      return "bg-orange-100 text-orange-700"
+      return "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
     case "AKTIF":
-      return "bg-green-100 text-green-700"
+      return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
     case "NON_AKTIF":
-      return "bg-gray-100 text-gray-700"
+      return "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400"
     case "LULUS":
-      return "bg-blue-100 text-blue-700"
+      return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
     case "KELUAR":
-      return "bg-orange-100 text-orange-700"
+      return "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
     default:
-      return "bg-gray-100 text-gray-700"
+      return "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400"
   }
 }
 
-// Fetch dashboard statistics
+// Fetch dashboard statistics for SMK
 async function getDashboardStats() {
   const now = new Date()
   const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
 
-  // Count total santri
+  // Count total SMK santri
   const totalSantri = await prisma.santri.count({
-    where: { status: "AKTIF" }
+    where: {
+      status: "AKTIF",
+      kelas: {
+        startsWith: "SMK"
+      }
+    }
   })
 
-  // Calculate income this month
+  // Calculate income this month for SMK
   const transactionsThisMonth = await prisma.transaksi.findMany({
     where: {
       status: "LUNAS",
       createdAt: {
         gte: firstDayOfMonth,
       },
+      santri: {
+        kelas: {
+          startsWith: "SMK"
+        }
+      }
     },
+    include: {
+      santri: {
+        select: {
+          kelas: true
+        }
+      }
+    }
   })
 
   const incomeThisMonth = transactionsThisMonth.reduce((sum, trx) => sum + trx.jumlah, 0)
 
-  // Calculate expenses (for now, we'll use a placeholder or derive from transactions)
-  // In a real app, you'd have a separate expenses table
-  const expensesThisMonth = 0 // Placeholder - update when expenses model is added
-
-  // Count pending transactions
+  // Count pending transactions for SMK
   const pendingTransactions = await prisma.transaksi.count({
-    where: { status: "PENDING" }
+    where: {
+      status: "PENDING",
+      santri: {
+        kelas: {
+          startsWith: "SMK"
+        }
+      }
+    }
+  })
+
+  // Count unpaid transactions for SMK
+  const unpaidTransactions = await prisma.transaksi.count({
+    where: {
+      status: "BELUM_BAYAR",
+      santri: {
+        kelas: {
+          startsWith: "SMK"
+        }
+      }
+    }
   })
 
   return {
     totalSantri,
     incomeThisMonth,
-    expensesThisMonth,
     pendingTransactions,
+    unpaidTransactions,
   }
 }
 
-// Fetch recent transactions
+// Fetch recent transactions for SMK
 async function getRecentTransactions() {
   return await prisma.transaksi.findMany({
-    take: 5,
+    take: 10,
     orderBy: { createdAt: "desc" },
+    where: {
+      santri: {
+        kelas: {
+          startsWith: "SMK"
+        }
+      }
+    },
     include: {
       santri: {
         select: {
           nama: true,
+          nis: true,
+          kelas: true,
         },
       },
     },
   })
 }
 
-// Fetch all users
-async function getUsers() {
-  return await prisma.user.findMany({
-    orderBy: { createdAt: "desc" },
-  })
-}
-
-// Fetch all santri
+// Fetch SMK santri
 async function getSantri() {
   return await prisma.santri.findMany({
+    where: {
+      kelas: {
+        startsWith: "SMK"
+      }
+    },
     orderBy: { createdAt: "desc" },
     include: {
       user: {
@@ -134,10 +173,17 @@ async function getSantri() {
   })
 }
 
-// Fetch transactions by type
+// Fetch transactions by type for SMK
 async function getTransactionsByType(jenis: string) {
   return await prisma.transaksi.findMany({
-    where: { jenis: jenis as any },
+    where: {
+      jenis: jenis as any,
+      santri: {
+        kelas: {
+          startsWith: "SMK"
+        }
+      }
+    },
     orderBy: { createdAt: "desc" },
     include: {
       santri: {
@@ -152,27 +198,29 @@ async function getTransactionsByType(jenis: string) {
   })
 }
 
-// Fetch financial summary
+// Fetch financial summary for SMK
 async function getFinancialSummary() {
   const now = new Date()
   const firstDayOfYear = new Date(now.getFullYear(), 0, 1)
 
-  // Total income this year
+  // Total income this year for SMK
   const incomeTransactions = await prisma.transaksi.findMany({
     where: {
       status: "LUNAS",
       createdAt: {
         gte: firstDayOfYear,
       },
+      santri: {
+        kelas: {
+          startsWith: "SMK"
+        }
+      }
     },
   })
 
   const totalIncome = incomeTransactions.reduce((sum, trx) => sum + trx.jumlah, 0)
 
-  // Total expenses (placeholder)
-  const totalExpenses = 0 // Placeholder - update when expenses model is added
-
-  // Get monthly breakdown
+  // Get monthly breakdown for SMK
   const monthlyData = await prisma.transaksi.groupBy({
     by: ["createdAt"],
     where: {
@@ -180,6 +228,11 @@ async function getFinancialSummary() {
       createdAt: {
         gte: firstDayOfYear,
       },
+      santri: {
+        kelas: {
+          startsWith: "SMK"
+        }
+      }
     },
     _sum: {
       jumlah: true,
@@ -193,7 +246,7 @@ async function getFinancialSummary() {
     monthlyIncome[monthKey] = (monthlyIncome[monthKey] || 0) + (item._sum.jumlah || 0)
   })
 
-  // Get breakdown by transaction type
+  // Get breakdown by transaction type for SMK
   const typeData = await prisma.transaksi.groupBy({
     by: ["jenis"],
     where: {
@@ -201,6 +254,11 @@ async function getFinancialSummary() {
       createdAt: {
         gte: firstDayOfYear,
       },
+      santri: {
+        kelas: {
+          startsWith: "SMK"
+        }
+      }
     },
     _count: true,
     _sum: {
@@ -216,13 +274,12 @@ async function getFinancialSummary() {
 
   return {
     totalIncome,
-    totalExpenses,
     monthlyIncome,
     transactionByType,
   }
 }
 
-export default async function AdminPage() {
+export default async function BendaharaSmkPage() {
   // Get session on server side
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -254,11 +311,11 @@ export default async function AdminPage() {
     )
   }
 
-  // Check if user has admin role
+  // Check if user has Bendahara SMK role
   const userRole = (session.user as any)?.role
-  const hasAdminAccess = ADMIN_ROLES.includes(userRole)
+  const hasAccess = BENDAHARA_SMK_ROLES.includes(userRole)
 
-  if (!hasAdminAccess) {
+  if (!hasAccess) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
@@ -268,7 +325,7 @@ export default async function AdminPage() {
               Akses Ditolak
             </CardTitle>
             <CardDescription>
-              Anda tidak memiliki izin untuk mengakses halaman admin. Role Anda: {userRole}
+              Anda tidak memiliki izin untuk mengakses halaman Bendahara SMK. Role Anda: {userRole}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -287,42 +344,37 @@ export default async function AdminPage() {
   const [
     stats,
     recentTransactions,
-    users,
     santri,
     sppTransactions,
     syahriahTransactions,
-    uangSakuTransactions,
-    laundryTransactions,
     financialSummary,
   ] = await Promise.all([
     getDashboardStats(),
     getRecentTransactions(),
-    getUsers(),
     getSantri(),
     getTransactionsByType("SPP"),
     getTransactionsByType("SYAHRIAH"),
-    getTransactionsByType("UANG_SAKU"),
-    getTransactionsByType("LAUNDRY"),
     getFinancialSummary(),
   ])
 
-  // Prepare data to pass to client components
+  // Format data for the dashboard
   const dashboardData = {
-    stats,
+    stats: {
+      totalSantri: stats.totalSantri,
+      incomeThisMonth: stats.incomeThisMonth,
+      pendingTransactions: stats.pendingTransactions,
+      unpaidTransactions: stats.unpaidTransactions,
+    },
     recentTransactions: recentTransactions.map((trx) => ({
-      id: trx.kode,
+      id: trx.id,
       namaSantri: trx.santri.nama,
       jenis: trx.jenis,
       jumlah: formatCurrency(trx.jumlah),
       status: trx.status,
-      tanggal: formatDate(trx.tanggalBayar || trx.createdAt),
-    })),
-    users: users.map((user) => ({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      status: user.emailVerified ? "Aktif" : "Tidak Aktif",
+      tanggal: formatDate(trx.createdAt),
+      kode: trx.kode,
+      nis: trx.santri.nis,
+      kelas: trx.santri.kelas,
     })),
     santri: santri.map((s) => ({
       id: s.id,
@@ -332,109 +384,47 @@ export default async function AdminPage() {
       asrama: s.asrama,
       wali: s.wali,
       status: s.status,
-      email: s.user?.email || "",
+      email: s.user?.email || "-",
       beasiswa: s.beasiswa,
       jenisBeasiswa: s.jenisBeasiswa,
     })),
     sppTransactions: sppTransactions.map((trx) => ({
       id: trx.id,
-      kode: trx.kode || "-",
+      kode: trx.kode,
       namaSantri: trx.santri.nama,
-      nis: trx.santri.nis || "-",
-      kelas: trx.santri.kelas || "-",
-      asrama: trx.santri.asrama || "-",
-      bulan: trx.bulan || "-",
-      periodePembayaran: trx.periodePembayaran || "-",
-      tahun: trx.tahun || "-",
+      nis: trx.santri.nis,
+      kelas: trx.santri.kelas,
+      asrama: trx.santri.asrama,
+      bulan: trx.bulan,
+      periodePembayaran: trx.periodePembayaran,
+      tahun: trx.tahun?.toString() || "-",
       jumlah: formatCurrency(trx.jumlah),
       tanggalBayar: formatDate(trx.tanggalBayar),
       keterangan: trx.keterangan || "-",
-      createdAt: new Intl.DateTimeFormat("id-ID", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      }).format(trx.createdAt),
+      createdAt: formatDate(trx.createdAt),
       status: trx.status,
       _raw: trx,
     })),
     syahriahTransactions: syahriahTransactions.map((trx) => ({
       id: trx.id,
-      kode: trx.kode || "-",
+      kode: trx.kode,
       namaSantri: trx.santri.nama,
-      nis: trx.santri.nis || "-",
-      kelas: trx.santri.kelas || "-",
-      asrama: trx.santri.asrama || "-",
-      bulan: trx.bulan || "-",
-      periodePembayaran: trx.periodePembayaran || "-",
-      tahun: trx.tahun || "-",
+      nis: trx.santri.nis,
+      kelas: trx.santri.kelas,
+      asrama: trx.santri.asrama,
+      bulan: trx.bulan,
+      periodePembayaran: trx.periodePembayaran,
+      tahun: trx.tahun?.toString() || "-",
       jumlah: formatCurrency(trx.jumlah),
       tanggalBayar: formatDate(trx.tanggalBayar),
       keterangan: trx.keterangan || "-",
-      createdAt: new Intl.DateTimeFormat("id-ID", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      }).format(trx.createdAt),
-      status: trx.status,
-      _raw: trx,
-    })),
-    uangSakuTransactions: uangSakuTransactions.map((trx) => ({
-      id: trx.id,
-      kode: trx.kode || "-",
-      namaSantri: trx.santri.nama,
-      nis: trx.santri.nis || "-",
-      kelas: trx.santri.kelas || "-",
-      asrama: trx.santri.asrama || "-",
-      jumlah: formatCurrency(trx.jumlah),
-      tanggal: formatDate(trx.tanggalBayar || trx.createdAt),
-      keterangan: trx.keterangan || "-",
-      createdAt: new Intl.DateTimeFormat("id-ID", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      }).format(trx.createdAt),
-      status: trx.statusUangSaku,
-      _raw: trx,
-    })),
-    laundryTransactions: laundryTransactions.map((trx) => ({
-      id: trx.id,
-      kode: trx.kode || "-",
-      namaSantri: trx.santri.nama,
-      nis: trx.santri.nis || "-",
-      kelas: trx.santri.kelas || "-",
-      asrama: trx.santri.asrama || "-",
-      jenisLaundry: trx.jenisLaundry || "-",
-      bulan: trx.bulan || "-",
-      tahun: trx.tahun || "-",
-      jumlah: formatCurrency(trx.jumlah),
-      tanggal: formatDate(trx.tanggalBayar || trx.createdAt),
-      keterangan: trx.keterangan || "-",
-      createdAt: new Intl.DateTimeFormat("id-ID", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      }).format(trx.createdAt),
+      createdAt: formatDate(trx.createdAt),
       status: trx.status,
       _raw: trx,
     })),
     financialSummary: {
       totalIncome: formatCurrency(financialSummary.totalIncome),
-      totalExpenses: formatCurrency(financialSummary.totalExpenses),
-      balance: formatCurrency(financialSummary.totalIncome - financialSummary.totalExpenses),
-      monthlyIncome: Object.entries(financialSummary.monthlyIncome).map(([month, amount]) => ({
-        month,
-        income: formatCurrency(amount),
-        expenses: "Rp 0", // Placeholder
-        balance: formatCurrency(amount),
-      })),
+      monthlyIncome: financialSummary.monthlyIncome,
       transactionByType: financialSummary.transactionByType.map((item) => ({
         jenis: item.jenis,
         count: item.count,
@@ -443,6 +433,7 @@ export default async function AdminPage() {
     },
   }
 
-  // Render admin dashboard with real data
-  return <DashboardLayout dashboardData={dashboardData} session={session} />
+  return (
+    <DashboardLayout dashboardData={dashboardData} session={session} />
+  )
 }

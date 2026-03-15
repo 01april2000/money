@@ -4,7 +4,7 @@ import { headers } from "next/headers"
 import { auth } from "@/lib/auth"
 
 // Define allowed roles for admin access
-const ADMIN_ROLES = ["ADMIN", "BENDAHARA_SMK", "BENDAHARA_SMP", "BENDAHARA_PONDOK"]
+const ADMIN_ROLES = ["ADMIN"]
 
 // GET all UANG_SAKU transactions
 export async function GET(request: NextRequest) {

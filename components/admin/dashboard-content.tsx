@@ -3494,6 +3494,8 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
     santriId: "",
     bulan: "",
     tahun: "",
+    jenisLaundry: "",
+    jumlah: "",
     status: "",
     keterangan: "",
   })
@@ -3974,7 +3976,6 @@ function LaundryManagement({ dashboardData }: { dashboardData?: DashboardContent
                 <p className="text-sm font-medium">Informasi Transaksi</p>
                 <p className="text-sm text-muted-foreground">Santri: <span className="font-semibold text-foreground">{transactions.find(t => t.id === editFormData.id)?.namaSantri}</span></p>
                 <p className="text-sm text-muted-foreground">Jenis: <span className="font-semibold text-foreground">{transactions.find(t => t.id === editFormData.id)?.jenisLaundry}</span></p>
-                <p className="text-sm text-muted-foreground">Periode: <span className="font-semibold text-foreground">{transactions.find(t => t.id === editFormData.id)?.bulan} {transactions.find(t => t.id === editFormData.id)?.tahun}</span></p>
                 <p className="text-sm text-muted-foreground">Jumlah: <span className="font-semibold text-foreground">{transactions.find(t => t.id === editFormData.id)?.jumlah}</span></p>
               </div>
               <div className="space-y-2">

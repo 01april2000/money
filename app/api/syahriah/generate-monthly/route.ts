@@ -4,7 +4,7 @@ import { headers } from "next/headers"
 import { auth } from "@/lib/auth"
 
 // Define allowed roles for admin access
-const ADMIN_ROLES = ["ADMIN", "BENDAHARA_SMK", "BENDAHARA_SMP", "BENDAHARA_PONDOK"]
+const ADMIN_ROLES = ["ADMIN"]
 
 // POST auto-generate Syahriah transactions for all active santri
 export async function POST(request: NextRequest) {
