@@ -3,8 +3,8 @@ import { prisma } from "@/lib/prisma"
 import { headers } from "next/headers"
 import { auth } from "@/lib/auth"
 
-// Define allowed roles for admin access
-const ADMIN_ROLES = ["ADMIN"]
+// Define allowed roles for admin and bendahara SMK access
+const ADMIN_ROLES = ["ADMIN", "BENDAHARA_SMK"]
 
 // GET all SPP transactions
 export async function GET(request: NextRequest) {

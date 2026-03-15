@@ -47,6 +47,12 @@ enum JenisBeasiswa {
   UANG_SAKU
 }
 
+enum JenisSantri {
+  SMK
+  SMP
+  PONDOK
+}
+
 enum PeriodePembayaran {
   BULANAN
   TAHUNAN
@@ -126,24 +132,26 @@ model Verification {
 }
 
 model Santri {
-  id          String           @id @default(cuid())
-  nis         String           @unique
-  nama        String
-  kelas       String
-  asrama      String
-  wali        String
-  status      StatusSantri     @default(AKTIF)
-  beasiswa    Boolean          @default(false)
+  id            String           @id @default(cuid())
+  nis           String           @unique
+  nama          String
+  kelas         String
+  asrama        String
+  wali          String
+  status        StatusSantri     @default(AKTIF)
+  beasiswa      Boolean          @default(false)
   jenisBeasiswa JenisBeasiswa?
-  user        User?            @relation
-  transaksi   Transaksi[]
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  jenisSantri   JenisSantri      @default(PONDOK)
+  user          User?            @relation
+  transaksi     Transaksi[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
   @@index([kelas])
   @@index([asrama])
   @@index([status])
   @@index([beasiswa])
+  @@index([jenisSantri])
   @@map("santri")
 }
 
@@ -162,6 +170,7 @@ model Transaksi {
   statusUangSaku    StatusUangSaku?
   jenisLaundry      String?
   keterangan        String?
+  managedBy         Role?               @default(ADMIN)
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
 
@@ -171,5 +180,6 @@ model Transaksi {
   @@index([createdAt])
   @@index([periodePembayaran])
   @@index([tahun])
+  @@index([managedBy])
   @@map("transaksi")
 }

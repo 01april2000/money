@@ -375,16 +375,246 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
 
 // SPP Management
 function SPPManagement({ dashboardData }: { dashboardData?: DashboardContentProps["dashboardData"] }) {
-  const transactions = dashboardData?.sppTransactions || []
+  const initialTransactions = dashboardData?.sppTransactions || []
+  const [transactions, setTransactions] = React.useState(initialTransactions)
   const [searchTerm, setSearchTerm] = React.useState("")
+  const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false)
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = React.useState(false)
   const [selectedTransaction, setSelectedTransaction] = React.useState<any>(null)
-  const [isDialogOpen, setIsDialogOpen] = React.useState(false)
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [santriList, setSantriList] = React.useState<any[]>([])
+  const [formData, setFormData] = React.useState({
+    santriId: "",
+    bulan: "",
+    jumlah: "",
+    status: "BELUM_BAYAR",
+    tanggalBayar: "",
+    keterangan: "",
+  })
+  const [editFormData, setEditFormData] = React.useState({
+    id: "",
+    santriId: "",
+    bulan: "",
+    jumlah: "",
+    status: "BELUM_BAYAR",
+    tanggalBayar: "",
+    keterangan: "",
+  })
+
+  // Fetch santri list on mount
+  React.useEffect(() => {
+    fetch("/api/santri")
+      .then(res => res.json())
+      .then(data => setSantriList(data.filter((s: any) => s.kelas?.startsWith("SMK"))))
+      .catch(err => console.error("Failed to fetch santri:", err))
+  }, [])
 
   const filteredTransactions = transactions.filter((trx) =>
     trx.namaSantri.toLowerCase().includes(searchTerm.toLowerCase()) ||
     trx.nis.toLowerCase().includes(searchTerm.toLowerCase()) ||
     trx.kode.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch("/api/spp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...formData,
+          jumlah: parseInt(formData.jumlah),
+          tanggalBayar: formData.tanggalBayar ? new Date(formData.tanggalBayar) : null,
+        }),
+      })
+
+      const newTrx = await response.json()
+
+      if (!response.ok) {
+        throw new Error(newTrx.error || "Failed to create SPP transaction")
+      }
+
+      toast.success("Transaksi SPP berhasil ditambahkan!")
+      
+      // Refresh transactions
+      const refreshResponse = await fetch("/api/spp")
+      const allTransactions = await refreshResponse.json()
+      const formattedTransactions = allTransactions.map((trx: any) => ({
+        id: trx.id,
+        kode: trx.kode || "-",
+        namaSantri: trx.santri.nama,
+        nis: trx.santri.nis || "-",
+        kelas: trx.santri.kelas || "-",
+        asrama: trx.santri.asrama || "-",
+        bulan: trx.bulan || "-",
+        periodePembayaran: trx.periodePembayaran || "-",
+        tahun: trx.tahun || "-",
+        jumlah: new Intl.NumberFormat("id-ID", {
+          style: "currency",
+          currency: "IDR",
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }).format(trx.jumlah),
+        tanggalBayar: trx.tanggalBayar ? new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }).format(new Date(trx.tanggalBayar)) : "-",
+        keterangan: trx.keterangan || "-",
+        createdAt: trx.createdAt ? new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(new Date(trx.createdAt)) : "-",
+        status: trx.status,
+        _raw: trx,
+      }))
+      setTransactions(formattedTransactions.filter((t: any) => t.kelas.startsWith("SMK")))
+      
+      setFormData({
+        santriId: "",
+        bulan: "",
+        jumlah: "",
+        status: "BELUM_BAYAR",
+        tanggalBayar: "",
+        keterangan: "",
+      })
+      setIsAddDialogOpen(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Terjadi kesalahan")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDelete = async (trxId: string) => {
+    toast.promise(
+      async () => {
+        const response = await fetch(`/api/spp/${trxId}`, {
+          method: "DELETE",
+        })
+
+        if (!response.ok) {
+          throw new Error("Gagal menghapus transaksi SPP")
+        }
+
+        return response.json()
+      },
+      {
+        loading: "Menghapus transaksi...",
+        success: () => {
+          setTransactions(prev => prev.filter(t => t.id !== trxId))
+          return "Transaksi SPP berhasil dihapus!"
+        },
+        error: "Gagal menghapus transaksi SPP",
+      }
+    )
+  }
+
+  const handleEdit = (trx: any) => {
+    setEditFormData({
+      id: trx.id,
+      santriId: trx._raw.santriId,
+      bulan: trx._raw.bulan || "",
+      jumlah: String(trx._raw.jumlah),
+      status: trx._raw.status,
+      tanggalBayar: trx._raw.tanggalBayar ? new Date(trx._raw.tanggalBayar).toISOString().split('T')[0] : "",
+      keterangan: trx._raw.keterangan || "",
+    })
+    setIsEditDialogOpen(true)
+  }
+
+  const handleViewDetail = (trx: any) => {
+    setSelectedTransaction(trx)
+    setIsDetailDialogOpen(true)
+  }
+
+  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setEditFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch(`/api/spp/${editFormData.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...editFormData,
+          jumlah: parseInt(editFormData.jumlah),
+          tanggalBayar: editFormData.tanggalBayar ? new Date(editFormData.tanggalBayar) : null,
+        }),
+      })
+
+      const updatedTrx = await response.json()
+
+      if (!response.ok) {
+        throw new Error(updatedTrx.error || "Failed to update SPP transaction")
+      }
+
+      toast.success("Transaksi SPP berhasil diperbarui!")
+      
+      // Refresh transactions
+      const refreshResponse = await fetch("/api/spp")
+      const allTransactions = await refreshResponse.json()
+      const formattedTransactions = allTransactions.map((trx: any) => ({
+        id: trx.id,
+        kode: trx.kode || "-",
+        namaSantri: trx.santri.nama,
+        nis: trx.santri.nis || "-",
+        kelas: trx.santri.kelas || "-",
+        asrama: trx.santri.asrama || "-",
+        bulan: trx.bulan || "-",
+        periodePembayaran: trx.periodePembayaran || "-",
+        tahun: trx.tahun || "-",
+        jumlah: new Intl.NumberFormat("id-ID", {
+          style: "currency",
+          currency: "IDR",
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }).format(trx.jumlah),
+        tanggalBayar: trx.tanggalBayar ? new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }).format(new Date(trx.tanggalBayar)) : "-",
+        keterangan: trx.keterangan || "-",
+        createdAt: trx.createdAt ? new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(new Date(trx.createdAt)) : "-",
+        status: trx.status,
+        _raw: trx,
+      }))
+      setTransactions(formattedTransactions.filter((t: any) => t.kelas.startsWith("SMK")))
+      
+      setIsEditDialogOpen(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Terjadi kesalahan")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   const handleUpdateStatus = async (id: string, newStatus: string) => {
     try {
@@ -397,7 +627,43 @@ function SPPManagement({ dashboardData }: { dashboardData?: DashboardContentProp
       if (!response.ok) throw new Error("Gagal mengupdate status")
 
       toast.success("Status berhasil diupdate")
-      window.location.reload()
+      
+      // Refresh transactions
+      const refreshResponse = await fetch("/api/spp")
+      const allTransactions = await refreshResponse.json()
+      const formattedTransactions = allTransactions.map((trx: any) => ({
+        id: trx.id,
+        kode: trx.kode || "-",
+        namaSantri: trx.santri.nama,
+        nis: trx.santri.nis || "-",
+        kelas: trx.santri.kelas || "-",
+        asrama: trx.santri.asrama || "-",
+        bulan: trx.bulan || "-",
+        periodePembayaran: trx.periodePembayaran || "-",
+        tahun: trx.tahun || "-",
+        jumlah: new Intl.NumberFormat("id-ID", {
+          style: "currency",
+          currency: "IDR",
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }).format(trx.jumlah),
+        tanggalBayar: trx.tanggalBayar ? new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }).format(new Date(trx.tanggalBayar)) : "-",
+        keterangan: trx.keterangan || "-",
+        createdAt: trx.createdAt ? new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(new Date(trx.createdAt)) : "-",
+        status: trx.status,
+        _raw: trx,
+      }))
+      setTransactions(formattedTransactions.filter((t: any) => t.kelas.startsWith("SMK")))
     } catch (error) {
       toast.error("Gagal mengupdate status")
     }
@@ -405,9 +671,112 @@ function SPPManagement({ dashboardData }: { dashboardData?: DashboardContentProp
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Manajemen SPP</h1>
-        <p className="text-muted-foreground">Kelola pembayaran SPP santri SMK</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Manajemen SPP</h1>
+          <p className="text-muted-foreground">Kelola pembayaran SPP santri SMK</p>
+        </div>
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Tambah Transaksi
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Tambah Transaksi SPP</DialogTitle>
+              <DialogDescription>
+                Masukkan data pembayaran SPP baru.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit}>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="santriId">Santri</Label>
+                  <select
+                    id="santriId"
+                    name="santriId"
+                    value={formData.santriId}
+                    onChange={handleInputChange}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    required
+                  >
+                    <option value="">Pilih Santri</option>
+                    {santriList.map((santri) => (
+                      <option key={santri.id} value={santri.id}>
+                        {santri.nama} ({santri.nis})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bulan">Bulan</Label>
+                  <Input
+                    id="bulan"
+                    name="bulan"
+                    value={formData.bulan}
+                    onChange={handleInputChange}
+                    placeholder="Contoh: Januari 2024"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="jumlah">Jumlah</Label>
+                  <Input
+                    id="jumlah"
+                    name="jumlah"
+                    type="number"
+                    value={formData.jumlah}
+                    onChange={handleInputChange}
+                    placeholder="Contoh: 500000"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <select
+                    id="status"
+                    name="status"
+                    value={formData.status}
+                    onChange={handleInputChange}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="BELUM_BAYAR">Belum Bayar</option>
+                    <option value="PENDING">Pending</option>
+                    <option value="LUNAS">Lunas</option>
+                    <option value="DITOLAK">Ditolak</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="tanggalBayar">Tanggal Bayar</Label>
+                  <Input
+                    id="tanggalBayar"
+                    name="tanggalBayar"
+                    type="date"
+                    value={formData.tanggalBayar}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="keterangan">Keterangan</Label>
+                  <Input
+                    id="keterangan"
+                    name="keterangan"
+                    value={formData.keterangan}
+                    onChange={handleInputChange}
+                    placeholder="Keterangan tambahan"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Menyimpan..." : "Simpan"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Card>
@@ -485,12 +854,23 @@ function SPPManagement({ dashboardData }: { dashboardData?: DashboardContentProp
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => {
-                            setSelectedTransaction(trx)
-                            setIsDialogOpen(true)
-                          }}
+                          onClick={() => handleViewDetail(trx)}
+                        >
+                          <FileText className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleEdit(trx)}
                         >
                           <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDelete(trx.id)}
+                        >
+                          <Trash2 className="h-3 w-3 text-destructive" />
                         </Button>
                       </div>
                     </TableCell>
@@ -502,53 +882,174 @@ function SPPManagement({ dashboardData }: { dashboardData?: DashboardContentProp
         </CardContent>
       </Card>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      {/* Detail Dialog */}
+      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Detail Transaksi SPP</DialogTitle>
+            <DialogDescription>
+              Informasi lengkap transaksi pembayaran SPP.
+            </DialogDescription>
           </DialogHeader>
           {selectedTransaction && (
-            <div className="space-y-4">
+            <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Kode</Label>
+                  <Label className="text-muted-foreground">Kode Transaksi</Label>
                   <p className="font-mono text-sm">{selectedTransaction.kode}</p>
                 </div>
                 <div>
-                  <Label>Nama Santri</Label>
-                  <p className="text-sm">{selectedTransaction.namaSantri}</p>
+                  <Label className="text-muted-foreground">Status</Label>
+                  <p>
+                    <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadgeColor(selectedTransaction.status)}`}>
+                      {selectedTransaction.status}
+                    </span>
+                  </p>
                 </div>
                 <div>
-                  <Label>NIS</Label>
-                  <p className="text-sm">{selectedTransaction.nis}</p>
+                  <Label className="text-muted-foreground">Nama Santri</Label>
+                  <p>{selectedTransaction.namaSantri}</p>
                 </div>
                 <div>
-                  <Label>Kelas</Label>
-                  <p className="text-sm">{selectedTransaction.kelas}</p>
+                  <Label className="text-muted-foreground">NIS</Label>
+                  <p>{selectedTransaction.nis}</p>
                 </div>
                 <div>
-                  <Label>Bulan</Label>
-                  <p className="text-sm">{selectedTransaction.bulan || "-"}</p>
+                  <Label className="text-muted-foreground">Kelas</Label>
+                  <p>{selectedTransaction.kelas}</p>
                 </div>
                 <div>
-                  <Label>Tahun</Label>
-                  <p className="text-sm">{selectedTransaction.tahun}</p>
+                  <Label className="text-muted-foreground">Asrama</Label>
+                  <p>{selectedTransaction.asrama}</p>
                 </div>
                 <div>
-                  <Label>Jumlah</Label>
-                  <p className="text-sm font-medium">{selectedTransaction.jumlah}</p>
+                  <Label className="text-muted-foreground">Bulan</Label>
+                  <p>{selectedTransaction.bulan}</p>
                 </div>
                 <div>
-                  <Label>Status</Label>
-                  <p className="text-sm">{selectedTransaction.status}</p>
+                  <Label className="text-muted-foreground">Periode Pembayaran</Label>
+                  <p>{selectedTransaction.periodePembayaran}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Tahun</Label>
+                  <p>{selectedTransaction.tahun}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Jumlah</Label>
+                  <p className="font-semibold">{selectedTransaction.jumlah}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Tanggal Bayar</Label>
+                  <p>{selectedTransaction.tanggalBayar}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Dibuat</Label>
+                  <p className="text-xs">{selectedTransaction.createdAt}</p>
                 </div>
                 <div className="col-span-2">
-                  <Label>Keterangan</Label>
-                  <p className="text-sm">{selectedTransaction.keterangan || "-"}</p>
+                  <Label className="text-muted-foreground">Keterangan</Label>
+                  <p className="text-sm">{selectedTransaction.keterangan}</p>
                 </div>
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Transaksi SPP</DialogTitle>
+            <DialogDescription>
+              Ubah data pembayaran SPP.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-santriId">Santri</Label>
+                <select
+                  id="edit-santriId"
+                  name="santriId"
+                  value={editFormData.santriId}
+                  onChange={handleEditInputChange}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  required
+                >
+                  <option value="">Pilih Santri</option>
+                  {santriList.map((santri) => (
+                    <option key={santri.id} value={santri.id}>
+                      {santri.nama} ({santri.nis})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-bulan">Bulan</Label>
+                <Input
+                  id="edit-bulan"
+                  name="bulan"
+                  value={editFormData.bulan}
+                  onChange={handleEditInputChange}
+                  placeholder="Contoh: Januari 2024"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-jumlah">Jumlah</Label>
+                <Input
+                  id="edit-jumlah"
+                  name="jumlah"
+                  type="number"
+                  value={editFormData.jumlah}
+                  onChange={handleEditInputChange}
+                  placeholder="Contoh: 500000"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-status">Status</Label>
+                <select
+                  id="edit-status"
+                  name="status"
+                  value={editFormData.status}
+                  onChange={handleEditInputChange}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="BELUM_BAYAR">Belum Bayar</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="LUNAS">Lunas</option>
+                  <option value="DITOLAK">Ditolak</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-tanggalBayar">Tanggal Bayar</Label>
+                <Input
+                  id="edit-tanggalBayar"
+                  name="tanggalBayar"
+                  type="date"
+                  value={editFormData.tanggalBayar}
+                  onChange={handleEditInputChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-keterangan">Keterangan</Label>
+                <Input
+                  id="edit-keterangan"
+                  name="keterangan"
+                  value={editFormData.keterangan}
+                  onChange={handleEditInputChange}
+                  placeholder="Keterangan tambahan"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Menyimpan..." : "Simpan"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

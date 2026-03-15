@@ -3,8 +3,8 @@ import { prisma } from "@/lib/prisma"
 import { headers } from "next/headers"
 import { auth } from "@/lib/auth"
 
-// Define allowed roles for admin access
-const ADMIN_ROLES = ["ADMIN"]
+// Define allowed roles for admin and bendahara SMK access
+const ADMIN_ROLES = ["ADMIN", "BENDAHARA_SMK"]
 
 // GET single SPP transaction by ID
 export async function GET(
@@ -198,6 +198,91 @@ export async function DELETE(
     return NextResponse.json({ message: "SPP transaction deleted successfully" })
   } catch (error) {
     console.error("Error deleting SPP transaction:", error)
+    const errorMessage = error instanceof Error ? error.message : "Unknown error"
+    console.error("Error message:", errorMessage)
+    return NextResponse.json({ error: errorMessage }, { status: 500 })
+  }
+}
+
+// PATCH update SPP transaction status
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    console.log("PATCH /api/spp/[id] - params:", { id })
+    // Check authentication and authorization
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    })
+
+    if (!session?.user) {
+      console.log("Unauthorized - no session")
+      return NextResponse.json(
+        { error: "Unauthorized - Please login" },
+        { status: 401 }
+      )
+    }
+
+    const userRole = (session.user as any)?.role
+    console.log("User role:", userRole, "Admin roles:", ADMIN_ROLES)
+    if (!ADMIN_ROLES.includes(userRole)) {
+      console.log("Forbidden - insufficient permissions")
+      return NextResponse.json(
+        { error: "Forbidden - Insufficient permissions" },
+        { status: 403 }
+      )
+    }
+
+    console.log("Transaction ID:", id)
+    const body = await request.json()
+    console.log("Request body:", body)
+    const { status } = body
+
+    if (!status) {
+      return NextResponse.json(
+        { error: "Missing required field: status" },
+        { status: 400 }
+      )
+    }
+
+    // Check if transaction exists
+    const existingTransaction = await prisma.transaksi.findUnique({
+      where: { id },
+    })
+
+    if (!existingTransaction) {
+      return NextResponse.json({ error: "SPP transaction not found" }, { status: 404 })
+    }
+
+    if (existingTransaction.jenis !== "SPP") {
+      return NextResponse.json({ error: "Transaction is not an SPP transaction" }, { status: 400 })
+    }
+
+    // Update SPP transaction status
+    const updatedTransaction = await prisma.transaksi.update({
+      where: { id },
+      data: {
+        status,
+        tanggalBayar: status === "LUNAS" ? new Date() : existingTransaction.tanggalBayar,
+      },
+      include: {
+        santri: {
+          select: {
+            id: true,
+            nama: true,
+            nis: true,
+            kelas: true,
+            asrama: true,
+          },
+        },
+      },
+    })
+
+    return NextResponse.json(updatedTransaction)
+  } catch (error) {
+    console.error("Error updating SPP transaction status:", error)
     const errorMessage = error instanceof Error ? error.message : "Unknown error"
     console.error("Error message:", errorMessage)
     return NextResponse.json({ error: errorMessage }, { status: 500 })
