@@ -28,7 +28,11 @@ import {
   CheckCircle,
   Clock,
   XCircle,
+  Layers,
+  Sparkles,
 } from "lucide-react"
+import { BulkSyahriahDialog } from "@/components/bendahara-smk/bulk-syahriah-dialog"
+import { GenerateMonthlySyahriahDialog } from "@/components/bendahara-smk/generate-monthly-syahriah-dialog"
 
 interface DashboardContentProps {
   activeItem: string
@@ -1063,6 +1067,9 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
   const [searchTerm, setSearchTerm] = React.useState("")
   const [selectedTransaction, setSelectedTransaction] = React.useState<any>(null)
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
+  const [isBulkDialogOpen, setIsBulkDialogOpen] = React.useState(false)
+  const [isGenerateDialogOpen, setIsGenerateDialogOpen] = React.useState(false)
+  const [refreshKey, setRefreshKey] = React.useState(0)
 
   const filteredTransactions = transactions.filter((trx) =>
     trx.namaSantri.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1072,8 +1079,8 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
 
   const handleUpdateStatus = async (id: string, newStatus: string) => {
     try {
-      const response = await fetch(`/api/syahriah/${id}`, {
-        method: "PATCH",
+      const response = await fetch(`/api/bendahara-smk/syahriah/${id}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       })
@@ -1081,17 +1088,61 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
       if (!response.ok) throw new Error("Gagal mengupdate status")
 
       toast.success("Status berhasil diupdate")
-      window.location.reload()
+      setRefreshKey(prev => prev + 1)
     } catch (error) {
       toast.error("Gagal mengupdate status")
     }
   }
 
+  const handleDelete = async (id: string) => {
+    if (!confirm("Apakah Anda yakin ingin menghapus transaksi ini?")) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/bendahara-smk/syahriah/${id}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) throw new Error("Gagal menghapus transaksi")
+
+      toast.success("Transaksi berhasil dihapus")
+      setRefreshKey(prev => prev + 1)
+    } catch (error) {
+      toast.error("Gagal menghapus transaksi")
+    }
+  }
+
+  const handleBulkSuccess = () => {
+    setRefreshKey(prev => prev + 1)
+  }
+
+  const handleGenerateSuccess = () => {
+    setRefreshKey(prev => prev + 1)
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Manajemen Syahriah</h1>
-        <p className="text-muted-foreground">Kelola pembayaran Syahriah santri SMK</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Manajemen Syahriah</h1>
+          <p className="text-muted-foreground">Kelola pembayaran Syahriah santri SMK</p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsBulkDialogOpen(true)}
+          >
+            <Layers className="h-4 w-4 mr-2" />
+            Bulk Tagihan
+          </Button>
+          <Button
+            onClick={() => setIsGenerateDialogOpen(true)}
+          >
+            <Sparkles className="h-4 w-4 mr-2" />
+            Generate Bulanan
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -1176,6 +1227,13 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
                         >
                           <Edit className="h-3 w-3" />
                         </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDelete(trx.id)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -1235,6 +1293,18 @@ function SyahriahManagement({ dashboardData }: { dashboardData?: DashboardConten
           )}
         </DialogContent>
       </Dialog>
+
+      <BulkSyahriahDialog
+        open={isBulkDialogOpen}
+        onOpenChange={setIsBulkDialogOpen}
+        onSuccess={handleBulkSuccess}
+      />
+
+      <GenerateMonthlySyahriahDialog
+        open={isGenerateDialogOpen}
+        onOpenChange={setIsGenerateDialogOpen}
+        onSuccess={handleGenerateSuccess}
+      />
     </div>
   )
 }

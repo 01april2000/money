@@ -168,7 +168,9 @@ async function getTransactionsByType(jenis: string) {
       jenis: jenis as any,
       santri: {
         jenisSantri: "SMK"
-      }
+      },
+      // Filter by managedBy for Syahriah transactions
+      ...(jenis === "SYAHRIAH" ? { managedBy: "BENDAHARA_SMK" } : {}),
     },
     orderBy: { createdAt: "desc" },
     include: {
