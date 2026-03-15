@@ -61,6 +61,7 @@ interface DashboardContentProps {
       email: string
       beasiswa?: boolean
       jenisBeasiswa?: string
+      jenisSantri?: string
     }>
     sppTransactions?: Array<{
       id: string
@@ -406,7 +407,7 @@ function SPPManagement({ dashboardData }: { dashboardData?: DashboardContentProp
   React.useEffect(() => {
     fetch("/api/santri")
       .then(res => res.json())
-      .then(data => setSantriList(data.filter((s: any) => s.kelas?.startsWith("SMK"))))
+      .then(data => setSantriList(data.filter((s: any) => s.jenisSantri === "SMK")))
       .catch(err => console.error("Failed to fetch santri:", err))
   }, [])
 
@@ -481,7 +482,7 @@ function SPPManagement({ dashboardData }: { dashboardData?: DashboardContentProp
         status: trx.status,
         _raw: trx,
       }))
-      setTransactions(formattedTransactions.filter((t: any) => t.kelas.startsWith("SMK")))
+      setTransactions(formattedTransactions.filter((t: any) => t._raw.santri?.jenisSantri === "SMK"))
       
       setFormData({
         santriId: "",
@@ -606,7 +607,7 @@ function SPPManagement({ dashboardData }: { dashboardData?: DashboardContentProp
         status: trx.status,
         _raw: trx,
       }))
-      setTransactions(formattedTransactions.filter((t: any) => t.kelas.startsWith("SMK")))
+      setTransactions(formattedTransactions.filter((t: any) => t._raw.santri?.jenisSantri === "SMK"))
       
       setIsEditDialogOpen(false)
     } catch (err) {
@@ -663,7 +664,7 @@ function SPPManagement({ dashboardData }: { dashboardData?: DashboardContentProp
         status: trx.status,
         _raw: trx,
       }))
-      setTransactions(formattedTransactions.filter((t: any) => t.kelas.startsWith("SMK")))
+      setTransactions(formattedTransactions.filter((t: any) => t._raw.santri?.jenisSantri === "SMK"))
     } catch (error) {
       toast.error("Gagal mengupdate status")
     }

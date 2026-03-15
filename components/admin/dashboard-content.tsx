@@ -75,6 +75,7 @@ interface DashboardContentProps {
       email: string
       beasiswa?: boolean
       jenisBeasiswa?: string
+      jenisSantri?: string
     }>
     sppTransactions?: Array<{
       id: string
@@ -235,6 +236,20 @@ function getStatusTextColor(status: string): string {
       return "text-red-600"
     default:
       return "text-gray-600"
+  }
+}
+
+// Helper function to get jenis santri badge color
+function getJenisSantriBadgeColor(jenisSantri?: string): string {
+  switch (jenisSantri) {
+    case "SMK":
+      return "bg-blue-100 text-blue-700"
+    case "SMP":
+      return "bg-purple-100 text-purple-700"
+    case "PONDOK":
+      return "bg-green-100 text-green-700"
+    default:
+      return "bg-gray-100 text-gray-700"
   }
 }
 
@@ -776,6 +791,7 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
     password: "",
     beasiswa: false,
     jenisBeasiswa: "",
+    jenisSantri: "PONDOK",
   })
   const [editFormData, setEditFormData] = React.useState({
     id: "",
@@ -789,6 +805,7 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
     password: "",
     beasiswa: false,
     jenisBeasiswa: "",
+    jenisSantri: "PONDOK",
   })
   const [searchQuery, setSearchQuery] = React.useState("")
 
@@ -825,7 +842,7 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
 
       toast.success("Santri berhasil ditambahkan!")
       setSantri(prev => [newSantri, ...prev])
-      setFormData({ nis: "", nama: "", kelas: "", asrama: "", wali: "", status: "AKTIF", email: "", password: "", beasiswa: false, jenisBeasiswa: "" })
+      setFormData({ nis: "", nama: "", kelas: "", asrama: "", wali: "", status: "AKTIF", email: "", password: "", beasiswa: false, jenisBeasiswa: "", jenisSantri: "PONDOK" })
       setIsAddDialogOpen(false)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Terjadi kesalahan")
@@ -858,7 +875,7 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
     )
   }
 
-  const handleEdit = (s: { id: string; nis: string; nama: string; kelas: string; asrama: string; wali: string; status: string; email?: string; beasiswa?: boolean; jenisBeasiswa?: string }) => {
+  const handleEdit = (s: { id: string; nis: string; nama: string; kelas: string; asrama: string; wali: string; status: string; email?: string; beasiswa?: boolean; jenisBeasiswa?: string; jenisSantri?: string }) => {
     setEditFormData({
       id: s.id,
       nis: s.nis,
@@ -871,6 +888,7 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
       password: "",
       beasiswa: s.beasiswa || false,
       jenisBeasiswa: s.jenisBeasiswa || "",
+      jenisSantri: s.jenisSantri || "PONDOK",
     })
     setIsEditDialogOpen(true)
   }
@@ -937,6 +955,7 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
             password: String(row.password || row.Password || row["Password"] || "123456"),
             beasiswa: Boolean(row.beasiswa || row.Beasiswa || row["Beasiswa"] || false),
             jenisBeasiswa: String(row.jenisBeasiswa || row.JenisBeasiswa || row["Jenis_Beasiswa"] || row["Jenis Beasiswa"] || ""),
+            jenisSantri: String(row.jenisSantri || row.JenisSantri || row["Jenis_Santri"] || row["Jenis Santri"] || row.jenisSekolah || row.JenisSekolah || row["Jenis Sekolah"] || "PONDOK").toUpperCase(),
           })).filter(item => item.nis && item.nama && item.kelas && item.asrama && item.wali && item.email)
 
           setParsedData(validData)
@@ -1006,6 +1025,7 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
         Password: "123456",
         Beasiswa: false,
         Jenis_Beasiswa: "",
+        Jenis_Santri: "PONDOK",
       },
     ]
     const worksheet = XLSX.utils.json_to_sheet(template)
@@ -1122,6 +1142,21 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
                     />
                   </div>
                   <div className="grid gap-2">
+                    <Label htmlFor="jenisSantri">Jenis Sekolah</Label>
+                    <select
+                      id="jenisSantri"
+                      name="jenisSantri"
+                      value={formData.jenisSantri}
+                      onChange={handleInputChange}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      required
+                    >
+                      <option value="SMK">SMK</option>
+                      <option value="SMP">SMP</option>
+                      <option value="PONDOK">Pondok</option>
+                    </select>
+                  </div>
+                  <div className="grid gap-2">
                     <Label htmlFor="email">Email</Label>
                     <Input
                       id="email"
@@ -1230,7 +1265,7 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
                     {excelFile ? excelFile.name : "Pilih file Excel"}
                   </p>
                   <p className="text-xs text-muted-foreground mb-4">
-                    Format file: .xlsx dengan kolom NIS, Nama, Kelas, Nomer_Kamar, Wali, Status, Email, Password, Beasiswa (opsional), Jenis_Beasiswa (opsional)
+                    Format file: .xlsx dengan kolom NIS, Nama, Kelas, Nomer_Kamar, Wali, Status, Email, Password, Beasiswa (opsional), Jenis_Beasiswa (opsional), Jenis_Santri (opsional, default: PONDOK)
                   </p>
                   <input
                     type="file"
@@ -1379,6 +1414,21 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
                   />
                 </div>
                 <div className="grid gap-2">
+                  <Label htmlFor="edit-jenisSantri">Jenis Sekolah</Label>
+                  <select
+                    id="edit-jenisSantri"
+                    name="jenisSantri"
+                    value={editFormData.jenisSantri}
+                    onChange={handleEditInputChange}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    required
+                  >
+                    <option value="SMK">SMK</option>
+                    <option value="SMP">SMP</option>
+                    <option value="PONDOK">Pondok</option>
+                  </select>
+                </div>
+                <div className="grid gap-2">
                   <Label htmlFor="edit-email">Email</Label>
                   <Input
                     id="edit-email"
@@ -1488,6 +1538,7 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
                 <TableHead>Kelas</TableHead>
                 <TableHead>Nomer Kamar</TableHead>
                 <TableHead>Wali</TableHead>
+                <TableHead>Jenis Sekolah</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Beasiswa</TableHead>
                 <TableHead>Aksi</TableHead>
@@ -1502,6 +1553,11 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
                     <TableCell>{s.kelas}</TableCell>
                     <TableCell>{s.asrama}</TableCell>
                     <TableCell>{s.wali}</TableCell>
+                    <TableCell>
+                      <span className={`px-2 py-1 rounded-full text-xs ${getJenisSantriBadgeColor(s.jenisSantri)}`}>
+                        {s.jenisSantri || "PONDOK"}
+                      </span>
+                    </TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadgeColor(s.status)}`}>
                         {s.status}
@@ -1535,7 +1591,7 @@ function SantriManagement({ dashboardData }: { dashboardData?: DashboardContentP
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center text-muted-foreground">
                     {searchQuery ? "Tidak ada santri yang cocok" : "Belum ada data santri"}
                   </TableCell>
                 </TableRow>

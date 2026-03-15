@@ -68,9 +68,7 @@ async function getDashboardStats() {
   const totalSantri = await prisma.santri.count({
     where: {
       status: "AKTIF",
-      kelas: {
-        startsWith: "SMK"
-      }
+      jenisSantri: "SMK"
     }
   })
 
@@ -82,9 +80,7 @@ async function getDashboardStats() {
         gte: firstDayOfMonth,
       },
       santri: {
-        kelas: {
-          startsWith: "SMK"
-        }
+        jenisSantri: "SMK"
       }
     },
     include: {
@@ -103,9 +99,7 @@ async function getDashboardStats() {
     where: {
       status: "PENDING",
       santri: {
-        kelas: {
-          startsWith: "SMK"
-        }
+        jenisSantri: "SMK"
       }
     }
   })
@@ -115,9 +109,7 @@ async function getDashboardStats() {
     where: {
       status: "BELUM_BAYAR",
       santri: {
-        kelas: {
-          startsWith: "SMK"
-        }
+        jenisSantri: "SMK"
       }
     }
   })
@@ -137,9 +129,7 @@ async function getRecentTransactions() {
     orderBy: { createdAt: "desc" },
     where: {
       santri: {
-        kelas: {
-          startsWith: "SMK"
-        }
+        jenisSantri: "SMK"
       }
     },
     include: {
@@ -158,9 +148,7 @@ async function getRecentTransactions() {
 async function getSantri() {
   return await prisma.santri.findMany({
     where: {
-      kelas: {
-        startsWith: "SMK"
-      }
+      jenisSantri: "SMK"
     },
     orderBy: { createdAt: "desc" },
     include: {
@@ -179,9 +167,7 @@ async function getTransactionsByType(jenis: string) {
     where: {
       jenis: jenis as any,
       santri: {
-        kelas: {
-          startsWith: "SMK"
-        }
+        jenisSantri: "SMK"
       }
     },
     orderBy: { createdAt: "desc" },
@@ -211,9 +197,7 @@ async function getFinancialSummary() {
         gte: firstDayOfYear,
       },
       santri: {
-        kelas: {
-          startsWith: "SMK"
-        }
+        jenisSantri: "SMK"
       }
     },
   })
@@ -229,9 +213,7 @@ async function getFinancialSummary() {
         gte: firstDayOfYear,
       },
       santri: {
-        kelas: {
-          startsWith: "SMK"
-        }
+        jenisSantri: "SMK"
       }
     },
     _sum: {
@@ -255,9 +237,7 @@ async function getFinancialSummary() {
         gte: firstDayOfYear,
       },
       santri: {
-        kelas: {
-          startsWith: "SMK"
-        }
+        jenisSantri: "SMK"
       }
     },
     _count: true,
@@ -387,6 +367,7 @@ export default async function BendaharaSmkPage() {
       email: s.user?.email || "-",
       beasiswa: s.beasiswa,
       jenisBeasiswa: s.jenisBeasiswa,
+      jenisSantri: s.jenisSantri,
     })),
     sppTransactions: sppTransactions.map((trx) => ({
       id: trx.id,

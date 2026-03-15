@@ -335,6 +335,7 @@ export default async function AdminPage() {
       email: s.user?.email || "",
       beasiswa: s.beasiswa,
       jenisBeasiswa: s.jenisBeasiswa,
+      jenisSantri: s.jenisSantri,
     })),
     sppTransactions: sppTransactions.map((trx) => ({
       id: trx.id,

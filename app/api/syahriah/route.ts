@@ -51,6 +51,7 @@ export async function GET(request: NextRequest) {
             nis: true,
             kelas: true,
             asrama: true,
+            jenisSantri: true,
           },
         },
       },

@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       const errors = []
 
       for (const item of santriData) {
-        const { nis, nama, kelas, asrama, wali, status, email, password, beasiswa, jenisBeasiswa } = item
+        const { nis, nama, kelas, asrama, wali, status, email, password, beasiswa, jenisBeasiswa, jenisSantri } = item
 
         // Validate required fields
         if (!nis || !nama || !kelas || !asrama || !wali) {
@@ -93,6 +93,7 @@ export async function POST(request: NextRequest) {
               status: status || "AKTIF",
               beasiswa: beasiswa || false,
               jenisBeasiswa: beasiswa ? (jenisBeasiswa || null) : null,
+              jenisSantri: jenisSantri || "PONDOK",
             },
           })
 
@@ -117,7 +118,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Single santri creation
-    const { nis, nama, kelas, asrama, wali, status, userId, email, password, beasiswa, jenisBeasiswa } = body
+    const { nis, nama, kelas, asrama, wali, status, userId, email, password, beasiswa, jenisBeasiswa, jenisSantri } = body
 
     // Validate required fields
     if (!nis || !nama || !kelas || !asrama || !wali) {
@@ -184,6 +185,7 @@ export async function POST(request: NextRequest) {
           status: status || "AKTIF",
           beasiswa: beasiswa || false,
           jenisBeasiswa: beasiswa ? (jenisBeasiswa || null) : null,
+          jenisSantri: jenisSantri || "PONDOK",
         },
       })
 
@@ -206,6 +208,7 @@ export async function POST(request: NextRequest) {
         status: status || "AKTIF",
         beasiswa: beasiswa || false,
         jenisBeasiswa: beasiswa ? (jenisBeasiswa || null) : null,
+        jenisSantri: jenisSantri || "PONDOK",
         user: {
           connect: { id: finalUserId },
         },
@@ -230,7 +233,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { nis, nama, kelas, asrama, wali, status, email, password, beasiswa, jenisBeasiswa } = body
+    const { nis, nama, kelas, asrama, wali, status, email, password, beasiswa, jenisBeasiswa, jenisSantri } = body
 
     // Check if santri exists
     const existingSantri = await prisma.santri.findUnique({
@@ -291,6 +294,7 @@ export async function PUT(request: NextRequest) {
         ...(beasiswa !== undefined && {
           jenisBeasiswa: beasiswa ? (jenisBeasiswa || null) : null,
         }),
+        ...(jenisSantri && { jenisSantri }),
       },
     })
 
