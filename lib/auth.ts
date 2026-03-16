@@ -18,6 +18,8 @@ export const auth = betterAuth({
             enabled: true,
             maxAge: 5 * 60, // 5 minutes
         },
+        // Include additional fields in session
+        includeUserFields: ["role", "santriId"],
     },
     account: {
         accountLinking: {
