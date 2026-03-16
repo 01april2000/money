@@ -1,5 +1,5 @@
-import { PrismaClient } from './generated/prisma/client';
-import * as Enums from './generated/prisma/enums';
+import { PrismaClient } from './generated/prisma';
+import * as Enums from './generated/prisma';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 
