@@ -41,6 +41,7 @@ export function DashboardContent({ santriId }: DashboardContentProps) {
   })
 
   const [loading, setLoading] = React.useState(true)
+  const [error, setError] = React.useState<string | null>(null)
 
   React.useEffect(() => {
     // Fetch data from API
@@ -53,6 +54,24 @@ export function DashboardContent({ santriId }: DashboardContentProps) {
             fetch(`/api/laundry/santri/${santriId}`),
             fetch(`/api/syahriah/santri/${santriId}`),
           ])
+
+          // Check if all responses are OK before parsing JSON
+          if (!sppRes.ok) {
+            if (sppRes.status === 404) {
+              setError("Data santri tidak ditemukan. Silakan hubungi administrator.")
+              return
+            }
+            throw new Error(`SPP API returned ${sppRes.status}: ${sppRes.statusText}`)
+          }
+          if (!uangSakuRes.ok) {
+            throw new Error(`Uang Saku API returned ${uangSakuRes.status}: ${uangSakuRes.statusText}`)
+          }
+          if (!laundryRes.ok) {
+            throw new Error(`Laundry API returned ${laundryRes.status}: ${laundryRes.statusText}`)
+          }
+          if (!syahriahRes.ok) {
+            throw new Error(`Syahriah API returned ${syahriahRes.status}: ${syahriahRes.statusText}`)
+          }
 
           const [sppData, uangSakuData, laundryData, syahriahData] = await Promise.all([
             sppRes.json(),
@@ -75,9 +94,11 @@ export function DashboardContent({ santriId }: DashboardContentProps) {
             syahriahLunas: syahriahData.transactions?.filter((t: any) => t.status === "LUNAS").length || 0,
             syahriahPending: syahriahData.transactions?.filter((t: any) => t.status !== "LUNAS").length || 0,
           })
+          setError(null)
         }
       } catch (error) {
         console.error("Error fetching dashboard data:", error)
+        setError("Gagal memuat data dashboard. Silakan coba lagi nanti.")
       } finally {
         setLoading(false)
       }
@@ -98,6 +119,18 @@ export function DashboardContent({ santriId }: DashboardContentProps) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <XCircle className="h-16 w-16 text-destructive" />
+        <div className="text-center space-y-2">
+          <h2 className="text-xl font-semibold">Terjadi Kesalahan</h2>
+          <p className="text-muted-foreground">{error}</p>
+        </div>
       </div>
     )
   }

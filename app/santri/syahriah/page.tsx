@@ -30,6 +30,7 @@ export default function SyahriahPage() {
   const router = useRouter()
   const [syahriahData, setSyahriahData] = useState<Transaksi[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isPending && !session) {
@@ -43,11 +44,20 @@ export default function SyahriahPage() {
         const santriId = (session?.user as any)?.santriId
         if (santriId) {
           const res = await fetch(`/api/syahriah/santri/${santriId}`)
+          if (!res.ok) {
+            if (res.status === 404) {
+              setError("Data santri tidak ditemukan. Silakan hubungi administrator.")
+              return
+            }
+            throw new Error(`Syahriah API returned ${res.status}: ${res.statusText}`)
+          }
           const data = await res.json()
           setSyahriahData(data.transactions || [])
+          setError(null)
         }
       } catch (error) {
         console.error("Error fetching syahriah data:", error)
+        setError("Gagal memuat data syahriah. Silakan coba lagi nanti.")
       } finally {
         setLoading(false)
       }
@@ -65,11 +75,20 @@ export default function SyahriahPage() {
         const santriId = (session?.user as any)?.santriId
         if (santriId) {
           const res = await fetch(`/api/syahriah/santri/${santriId}`)
+          if (!res.ok) {
+            if (res.status === 404) {
+              setError("Data santri tidak ditemukan. Silakan hubungi administrator.")
+              return
+            }
+            throw new Error(`Syahriah API returned ${res.status}: ${res.statusText}`)
+          }
           const data = await res.json()
           setSyahriahData(data.transactions || [])
+          setError(null)
         }
       } catch (error) {
         console.error("Error fetching syahriah data:", error)
+        setError("Gagal memuat data syahriah. Silakan coba lagi nanti.")
       }
     }
     fetchSyahriah()
@@ -136,6 +155,20 @@ export default function SyahriahPage() {
 
   if (!session) {
     return null
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout activeItem="syahriah">
+        <div className="flex flex-col items-center justify-center h-64 space-y-4">
+          <XCircle className="h-16 w-16 text-destructive" />
+          <div className="text-center space-y-2">
+            <h2 className="text-xl font-semibold">Terjadi Kesalahan</h2>
+            <p className="text-muted-foreground">{error}</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   return (

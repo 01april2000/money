@@ -29,6 +29,7 @@ export default function ProfilPage() {
   const router = useRouter()
   const [santriData, setSantriData] = useState<SantriData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isPending && !session) {
@@ -42,12 +43,23 @@ export default function ProfilPage() {
         const santriId = (session?.user as any)?.santriId
         if (santriId) {
           const res = await fetch(`/api/santri`)
+          if (!res.ok) {
+            throw new Error(`Santri API returned ${res.status}: ${res.statusText}`)
+          }
           const data = await res.json()
           const santri = data.find((s: any) => s.id === santriId)
-          setSantriData(santri || null)
+          if (!santri) {
+            setError("Data santri tidak ditemukan. Silakan hubungi administrator.")
+          } else {
+            setSantriData(santri)
+            setError(null)
+          }
+        } else {
+          setError("ID santri tidak ditemukan di sesi. Silakan login kembali.")
         }
       } catch (error) {
         console.error("Error fetching santri data:", error)
+        setError("Gagal memuat data profil. Silakan coba lagi nanti.")
       } finally {
         setLoading(false)
       }
@@ -122,6 +134,20 @@ export default function ProfilPage() {
 
   if (!session) {
     return null
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout activeItem="profil">
+        <div className="flex flex-col items-center justify-center h-64 space-y-4">
+          <XCircle className="h-16 w-16 text-destructive" />
+          <div className="text-center space-y-2">
+            <h2 className="text-xl font-semibold">Terjadi Kesalahan</h2>
+            <p className="text-muted-foreground">{error}</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   return (

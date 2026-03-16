@@ -28,6 +28,7 @@ export default function SppPage() {
   const router = useRouter()
   const [sppData, setSppData] = useState<Transaksi[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isPending && !session) {
@@ -41,11 +42,20 @@ export default function SppPage() {
         const santriId = (session?.user as any)?.santriId
         if (santriId) {
           const res = await fetch(`/api/spp/santri/${santriId}`)
+          if (!res.ok) {
+            if (res.status === 404) {
+              setError("Data santri tidak ditemukan. Silakan hubungi administrator.")
+              return
+            }
+            throw new Error(`SPP API returned ${res.status}: ${res.statusText}`)
+          }
           const data = await res.json()
           setSppData(data.transactions || [])
+          setError(null)
         }
       } catch (error) {
         console.error("Error fetching SPP data:", error)
+        setError("Gagal memuat data SPP. Silakan coba lagi nanti.")
       } finally {
         setLoading(false)
       }
@@ -63,11 +73,20 @@ export default function SppPage() {
         const santriId = (session?.user as any)?.santriId
         if (santriId) {
           const res = await fetch(`/api/spp/santri/${santriId}`)
+          if (!res.ok) {
+            if (res.status === 404) {
+              setError("Data santri tidak ditemukan. Silakan hubungi administrator.")
+              return
+            }
+            throw new Error(`SPP API returned ${res.status}: ${res.statusText}`)
+          }
           const data = await res.json()
           setSppData(data.transactions || [])
+          setError(null)
         }
       } catch (error) {
         console.error("Error fetching SPP data:", error)
+        setError("Gagal memuat data SPP. Silakan coba lagi nanti.")
       }
     }
     fetchSpp()
@@ -134,6 +153,20 @@ export default function SppPage() {
 
   if (!session) {
     return null
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout activeItem="spp">
+        <div className="flex flex-col items-center justify-center h-64 space-y-4">
+          <XCircle className="h-16 w-16 text-destructive" />
+          <div className="text-center space-y-2">
+            <h2 className="text-xl font-semibold">Terjadi Kesalahan</h2>
+            <p className="text-muted-foreground">{error}</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   return (

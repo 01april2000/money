@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { DashboardLayout } from "@/components/santri/dashboard-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Shirt, CheckCircle, Clock, Package } from "lucide-react"
+import { Shirt, CheckCircle, Clock, Package, XCircle } from "lucide-react"
 import { useSession } from "@/lib/auth-client"
 import { useRouter } from "next/navigation"
 
@@ -23,6 +23,7 @@ export default function LaundryPage() {
   const router = useRouter()
   const [laundryData, setLaundryData] = useState<Transaksi[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isPending && !session) {
@@ -36,11 +37,20 @@ export default function LaundryPage() {
         const santriId = (session?.user as any)?.santriId
         if (santriId) {
           const res = await fetch(`/api/laundry/santri/${santriId}`)
+          if (!res.ok) {
+            if (res.status === 404) {
+              setError("Data santri tidak ditemukan. Silakan hubungi administrator.")
+              return
+            }
+            throw new Error(`Laundry API returned ${res.status}: ${res.statusText}`)
+          }
           const data = await res.json()
           setLaundryData(data.transactions || [])
+          setError(null)
         }
       } catch (error) {
         console.error("Error fetching laundry data:", error)
+        setError("Gagal memuat data laundry. Silakan coba lagi nanti.")
       } finally {
         setLoading(false)
       }
@@ -114,6 +124,20 @@ export default function LaundryPage() {
 
   if (!session) {
     return null
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout activeItem="laundry">
+        <div className="flex flex-col items-center justify-center h-64 space-y-4">
+          <XCircle className="h-16 w-16 text-destructive" />
+          <div className="text-center space-y-2">
+            <h2 className="text-xl font-semibold">Terjadi Kesalahan</h2>
+            <p className="text-muted-foreground">{error}</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   return (
