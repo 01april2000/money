@@ -54,13 +54,32 @@ export function AuthCard() {
         const result = await signIn.email({
           email,
           password,
+          fetchOptions: {
+            onSuccess: async (ctx: any) => {
+              // Get the user role from the response
+              const userRole = ctx.data?.user?.role
+              
+              // Redirect based on role
+              switch (userRole) {
+                case "bendahara":
+                  router.push("/bendahara-smk")
+                  break
+                case "admin":
+                  router.push("/admin")
+                  break
+                case "santri":
+                  router.push("/santri")
+                  break
+                default:
+                  // Default to home page
+                  router.push("/")
+              }
+            },
+          },
         })
 
         if (result.error) {
           setError(result.error.message || "Email/NIS atau password salah")
-        } else {
-          // Login successful, redirect to home or dashboard
-          router.push("/")
         }
       }
     } catch (err) {

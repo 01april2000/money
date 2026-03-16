@@ -1,11 +1,27 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { useSession } from "@/lib/auth-client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { LogoutButton } from "@/components/logout-button"
 
 export function User() {
   const { data: session, isPending } = useSession()
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  if (!isMounted) {
+    return (
+      <Card className="w-full max-w-md">
+        <CardContent className="p-6">
+          <p className="text-muted-foreground">Loading user data...</p>
+        </CardContent>
+      </Card>
+    )
+  }
 
   if (isPending) {
     return (

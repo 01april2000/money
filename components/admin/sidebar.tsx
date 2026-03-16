@@ -17,6 +17,7 @@ import {
   LogOut
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { LogoutButton } from "../logout-button"
 
 export type MenuItem = {
   id: string
@@ -107,12 +108,7 @@ export function Sidebar({ activeItem, onItemSelect, expandedItems, onToggleExpan
 
       {/* Footer */}
       <div className="p-4 border-t border-border">
-        <Button variant="outline" className="w-full justify-start gap-2" asChild>
-          <a href="/">
-            <LogOut className="h-4 w-4" />
-            Logout
-          </a>
-        </Button>
+       <LogoutButton></LogoutButton>
       </div>
     </aside>
   )
