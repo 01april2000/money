@@ -37,7 +37,7 @@ export default function LaundryPage() {
         if (santriId) {
           const res = await fetch(`/api/laundry/santri/${santriId}`)
           const data = await res.json()
-          setLaundryData(data)
+          setLaundryData(data.transactions || [])
         }
       } catch (error) {
         console.error("Error fetching laundry data:", error)

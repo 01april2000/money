@@ -36,7 +36,7 @@ export default function SppPage() {
         if (santriId) {
           const res = await fetch(`/api/spp/santri/${santriId}`)
           const data = await res.json()
-          setSppData(data)
+          setSppData(data.transactions || [])
         }
       } catch (error) {
         console.error("Error fetching SPP data:", error)

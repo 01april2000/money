@@ -38,7 +38,7 @@ export default function SyahriahPage() {
         if (santriId) {
           const res = await fetch(`/api/syahriah/santri/${santriId}`)
           const data = await res.json()
-          setSyahriahData(data)
+          setSyahriahData(data.transactions || [])
         }
       } catch (error) {
         console.error("Error fetching syahriah data:", error)

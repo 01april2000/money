@@ -31,6 +31,11 @@ export const auth = betterAuth({
                 required: false,
                 input: false,
             },
+            santriId: {
+                type: "string",
+                required: false,
+                input: false,
+            },
         },
     },
     // Custom credential handler to support both email and NIS login
@@ -41,7 +46,16 @@ export const auth = betterAuth({
             // First, try to find user by email (standard flow)
             let user = await prisma.user.findUnique({
                 where: { email },
-                include: { accounts: true },
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    emailVerified: true,
+                    image: true,
+                    role: true,
+                    santriId: true,
+                    accounts: true,
+                },
             });
             
             // If not found by email, try to find by NIS (santri username)
@@ -80,6 +94,7 @@ export const auth = betterAuth({
                 emailVerified: user.emailVerified,
                 image: user.image,
                 role: user.role,
+                santriId: user.santriId,
             };
         },
     },

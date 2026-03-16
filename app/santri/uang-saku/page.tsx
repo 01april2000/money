@@ -35,7 +35,7 @@ export default function UangSakuPage() {
         if (santriId) {
           const res = await fetch(`/api/uang-saku/santri/${santriId}`)
           const data = await res.json()
-          setUangSakuData(data)
+          setUangSakuData(data.transactions || [])
         }
       } catch (error) {
         console.error("Error fetching uang saku data:", error)

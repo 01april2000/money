@@ -62,18 +62,18 @@ export function DashboardContent({ santriId }: DashboardContentProps) {
           ])
 
           setData({
-            totalSpp: sppData.length || 0,
-            totalUangSaku: uangSakuData.length || 0,
-            totalLaundry: laundryData.length || 0,
-            totalSyahriah: syahriahData.length || 0,
-            sppLunas: sppData.filter((t: any) => t.status === "LUNAS").length || 0,
-            sppPending: sppData.filter((t: any) => t.status !== "LUNAS").length || 0,
-            uangSakuMasuk: uangSakuData.filter((t: any) => t.statusUangSaku === "DITAMBAH").length || 0,
-            uangSakuKeluar: uangSakuData.filter((t: any) => t.statusUangSaku === "DIAMBIL").length || 0,
-            laundrySelesai: laundryData.filter((t: any) => t.status === "LUNAS").length || 0,
-            laundryProses: laundryData.filter((t: any) => t.status !== "LUNAS").length || 0,
-            syahriahLunas: syahriahData.filter((t: any) => t.status === "LUNAS").length || 0,
-            syahriahPending: syahriahData.filter((t: any) => t.status !== "LUNAS").length || 0,
+            totalSpp: sppData.transactions?.length || 0,
+            totalUangSaku: uangSakuData.transactions?.length || 0,
+            totalLaundry: laundryData.transactions?.length || 0,
+            totalSyahriah: syahriahData.transactions?.length || 0,
+            sppLunas: sppData.transactions?.filter((t: any) => t.status === "LUNAS").length || 0,
+            sppPending: sppData.transactions?.filter((t: any) => t.status !== "LUNAS").length || 0,
+            uangSakuMasuk: uangSakuData.transactions?.filter((t: any) => t.statusUangSaku === "DITAMBAH").length || 0,
+            uangSakuKeluar: uangSakuData.transactions?.filter((t: any) => t.statusUangSaku === "DIAMBIL").length || 0,
+            laundrySelesai: laundryData.transactions?.filter((t: any) => t.status === "LUNAS").length || 0,
+            laundryProses: laundryData.transactions?.filter((t: any) => t.status !== "LUNAS").length || 0,
+            syahriahLunas: syahriahData.transactions?.filter((t: any) => t.status === "LUNAS").length || 0,
+            syahriahPending: syahriahData.transactions?.filter((t: any) => t.status !== "LUNAS").length || 0,
           })
         }
       } catch (error) {
