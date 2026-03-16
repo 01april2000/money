@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { DashboardLayout } from "@/components/santri/dashboard-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Wallet, TrendingUp, TrendingDown, ArrowDownCircle, ArrowUpCircle } from "lucide-react"
+import { Wallet, TrendingUp, TrendingDown, ArrowDownCircle, ArrowUpCircle, XCircle } from "lucide-react"
 import { useSession } from "@/lib/auth-client"
 import { useRouter } from "next/navigation"
 import { PaymentButton } from "@/components/santri/payment-button"
