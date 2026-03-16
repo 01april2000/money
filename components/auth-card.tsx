@@ -57,7 +57,7 @@ export function AuthCard() {
         })
 
         if (result.error) {
-          setError(result.error.message || "Invalid email or password")
+          setError(result.error.message || "Email/NIS atau password salah")
         } else {
           // Login successful, redirect to home or dashboard
           router.push("/")
@@ -76,7 +76,7 @@ export function AuthCard() {
         <CardTitle>{mode === "login" ? "Welcome Back" : "Create Account"}</CardTitle>
         <CardDescription>
           {mode === "login"
-            ? "Enter your credentials to access your account"
+            ? "Masukkan email atau NIS dan password untuk login"
             : "Fill in the details below to create a new account"}
         </CardDescription>
       </CardHeader>
@@ -102,12 +102,12 @@ export function AuthCard() {
             </div>
           )}
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">Email / NIS</Label>
             <Input
               id="email"
               name="email"
-              type="email"
-              placeholder="you@example.com"
+              type="text"
+              placeholder="you@example.com atau NIS (cth: 2024001)"
               required
             />
           </div>

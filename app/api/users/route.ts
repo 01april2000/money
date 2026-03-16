@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { headers } from "next/headers"
 import { auth } from "@/lib/auth"
+import { hashPassword } from "better-auth/crypto"
 
 // Define allowed roles for admin access
 const ADMIN_ROLES = ["ADMIN"]
@@ -99,9 +100,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Hash password (simple implementation - in production use bcrypt)
-    // For now, we'll store the password as-is since the auth system handles hashing
-    // Note: This is a simplified approach. In production, use bcrypt or similar
+    // Hash password before storing
+    const hashedPassword = await hashPassword(password)
 
     // Create user
     const newUser = await prisma.user.create({
@@ -114,14 +114,14 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Create account with password
+    // Create account with hashed password
     await prisma.account.create({
       data: {
         id: crypto.randomUUID(),
         accountId: email,
         providerId: "credential",
         userId: newUser.id,
-        password: password, // In production, hash this password
+        password: hashedPassword,
       },
     })
 

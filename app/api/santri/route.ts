@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { hashPassword } from "better-auth/crypto"
 
 // GET all santri
 export async function GET() {
@@ -61,6 +62,9 @@ export async function POST(request: NextRequest) {
         }
 
         try {
+          // Hash password before storing
+          const hashedPassword = await hashPassword(password)
+
           // Create user first with account
           const user = await prisma.user.create({
             data: {
@@ -74,7 +78,7 @@ export async function POST(request: NextRequest) {
                   id: crypto.randomUUID(),
                   accountId: email,
                   providerId: "credential",
-                  password: password,
+                  password: hashedPassword,
                 },
               },
             },
@@ -153,6 +157,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Email already exists" }, { status: 400 })
       }
 
+      // Hash password before storing
+      const hashedPassword = await hashPassword(password)
+
       // Create user first with account
       const user = await prisma.user.create({
         data: {
@@ -166,7 +173,7 @@ export async function POST(request: NextRequest) {
               id: crypto.randomUUID(),
               accountId: email,
               providerId: "credential",
-              password: password,
+              password: hashedPassword,
             },
           },
         },
