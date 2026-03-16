@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar, CheckCircle, Clock, XCircle } from "lucide-react"
 import { useSession } from "@/lib/auth-client"
 import { useRouter } from "next/navigation"
+import { PaymentButton } from "@/components/santri/payment-button"
 
 interface Transaksi {
   id: string
@@ -15,6 +16,11 @@ interface Transaksi {
   jumlah: number
   status: string
   tanggalBayar: string | null
+  midtransTransactions?: Array<{
+    id: string
+    orderId: string
+    transactionStatus: string
+  }>
 }
 
 export default function SppPage() {
@@ -49,6 +55,23 @@ export default function SppPage() {
       fetchSpp()
     }
   }, [session])
+
+  const handlePaymentComplete = () => {
+    // Refresh SPP data after payment
+    const fetchSpp = async () => {
+      try {
+        const santriId = (session?.user as any)?.santriId
+        if (santriId) {
+          const res = await fetch(`/api/spp/santri/${santriId}`)
+          const data = await res.json()
+          setSppData(data.transactions || [])
+        }
+      } catch (error) {
+        console.error("Error fetching SPP data:", error)
+      }
+    }
+    fetchSpp()
+  }
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -190,11 +213,22 @@ export default function SppPage() {
                         Kode: {spp.kode}
                       </p>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold">{formatCurrency(spp.jumlah)}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDate(spp.tanggalBayar)}
-                      </p>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                      <div className="text-right">
+                        <p className="font-semibold">{formatCurrency(spp.jumlah)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDate(spp.tanggalBayar)}
+                        </p>
+                      </div>
+                      {spp.status !== "LUNAS" && (
+                        <PaymentButton
+                          transaksiId={spp.id}
+                          amount={spp.jumlah}
+                          disabled={spp.status === "DITOLAK"}
+                          onPaymentComplete={handlePaymentComplete}
+                          orderId={spp.midtransTransactions?.[0]?.orderId}
+                        />
+                      )}
                     </div>
                   </div>
                 ))}

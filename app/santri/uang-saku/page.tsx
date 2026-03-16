@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Wallet, TrendingUp, TrendingDown, ArrowDownCircle, ArrowUpCircle } from "lucide-react"
 import { useSession } from "@/lib/auth-client"
 import { useRouter } from "next/navigation"
+import { PaymentButton } from "@/components/santri/payment-button"
 
 interface Transaksi {
   id: string
@@ -14,6 +15,11 @@ interface Transaksi {
   statusUangSaku: string
   keterangan: string | null
   createdAt: string
+  midtransTransactions?: Array<{
+    id: string
+    orderId: string
+    transactionStatus: string
+  }>
 }
 
 export default function UangSakuPage() {
@@ -48,6 +54,23 @@ export default function UangSakuPage() {
       fetchUangSaku()
     }
   }, [session])
+
+  const handlePaymentComplete = () => {
+    // Refresh Uang Saku data after payment
+    const fetchUangSaku = async () => {
+      try {
+        const santriId = (session?.user as any)?.santriId
+        if (santriId) {
+          const res = await fetch(`/api/uang-saku/santri/${santriId}`)
+          const data = await res.json()
+          setUangSakuData(data.transactions || [])
+        }
+      } catch (error) {
+        console.error("Error fetching uang saku data:", error)
+      }
+    }
+    fetchUangSaku()
+  }
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -212,13 +235,23 @@ export default function UangSakuPage() {
                           </p>
                         </div>
                       </div>
-                      <div className={`text-right font-semibold ${
-                        transaksi.statusUangSaku === "DITAMBAH"
-                          ? "text-green-600"
-                          : "text-red-600"
-                      }`}>
-                        {transaksi.statusUangSaku === "DITAMBAH" ? "+" : "-"}
-                        {formatCurrency(transaksi.jumlah)}
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                        <div className={`text-right font-semibold ${
+                          transaksi.statusUangSaku === "DITAMBAH"
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}>
+                          {transaksi.statusUangSaku === "DITAMBAH" ? "+" : "-"}
+                          {formatCurrency(transaksi.jumlah)}
+                        </div>
+                        {transaksi.statusUangSaku === "DITAMBAH" && (
+                          <PaymentButton
+                            transaksiId={transaksi.id}
+                            amount={transaksi.jumlah}
+                            onPaymentComplete={handlePaymentComplete}
+                            orderId={transaksi.midtransTransactions?.[0]?.orderId}
+                          />
+                        )}
                       </div>
                     </div>
                   ))}

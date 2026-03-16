@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar, CheckCircle, Clock, XCircle } from "lucide-react"
 import { useSession } from "@/lib/auth-client"
 import { useRouter } from "next/navigation"
+import { PaymentButton } from "@/components/santri/payment-button"
 
 interface Transaksi {
   id: string
@@ -17,6 +18,11 @@ interface Transaksi {
   tanggalBayar: string | null
   periodePembayaran: string | null
   createdAt: string
+  midtransTransactions?: Array<{
+    id: string
+    orderId: string
+    transactionStatus: string
+  }>
 }
 
 export default function SyahriahPage() {
@@ -51,6 +57,23 @@ export default function SyahriahPage() {
       fetchSyahriah()
     }
   }, [session])
+
+  const handlePaymentComplete = () => {
+    // Refresh Syahriah data after payment
+    const fetchSyahriah = async () => {
+      try {
+        const santriId = (session?.user as any)?.santriId
+        if (santriId) {
+          const res = await fetch(`/api/syahriah/santri/${santriId}`)
+          const data = await res.json()
+          setSyahriahData(data.transactions || [])
+        }
+      } catch (error) {
+        console.error("Error fetching syahriah data:", error)
+      }
+    }
+    fetchSyahriah()
+  }
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -199,11 +222,22 @@ export default function SyahriahPage() {
                           </p>
                         )}
                       </div>
-                      <div className="text-right">
-                        <p className="font-semibold">{formatCurrency(syahriah.jumlah)}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatDate(syahriah.tanggalBayar)}
-                        </p>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                        <div className="text-right">
+                          <p className="font-semibold">{formatCurrency(syahriah.jumlah)}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatDate(syahriah.tanggalBayar)}
+                          </p>
+                        </div>
+                        {syahriah.status !== "LUNAS" && (
+                          <PaymentButton
+                            transaksiId={syahriah.id}
+                            amount={syahriah.jumlah}
+                            disabled={syahriah.status === "DITOLAK"}
+                            onPaymentComplete={handlePaymentComplete}
+                            orderId={syahriah.midtransTransactions?.[0]?.orderId}
+                          />
+                        )}
                       </div>
                     </div>
                   ))}

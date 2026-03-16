@@ -157,23 +157,24 @@ model Santri {
 }
 
 model Transaksi {
-  id                String              @id @default(cuid())
-  kode              String              @unique
-  santriId          String
-  santri            Santri              @relation(fields: [santriId], references: [id], onDelete: Cascade)
-  jenis             JenisTransaksi
-  bulan             String?
-  periodePembayaran PeriodePembayaran?
-  tahun             Int?
-  jumlah            Int
-  tanggalBayar      DateTime?
-  status            StatusTransaksi     @default(BELUM_BAYAR)
-  statusUangSaku    StatusUangSaku?
-  jenisLaundry      String?
-  keterangan        String?
-  managedBy         Role?               @default(ADMIN)
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
+  id                    String                @id @default(cuid())
+  kode                  String                @unique
+  santriId              String
+  santri                Santri                @relation(fields: [santriId], references: [id], onDelete: Cascade)
+  jenis                 JenisTransaksi
+  bulan                 String?
+  periodePembayaran     PeriodePembayaran?
+  tahun                 Int?
+  jumlah                Int
+  tanggalBayar          DateTime?
+  status                StatusTransaksi       @default(BELUM_BAYAR)
+  statusUangSaku        StatusUangSaku?
+  jenisLaundry          String?
+  keterangan            String?
+  managedBy             Role?                 @default(ADMIN)
+  midtransTransactions  MidtransTransaction[]
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
 
   @@index([santriId])
   @@index([jenis])
@@ -183,4 +184,25 @@ model Transaksi {
   @@index([tahun])
   @@index([managedBy])
   @@map("transaksi")
+}
+
+model MidtransTransaction {
+  id                String   @id @default(cuid())
+  orderId           String   @unique
+  transactionId     String?  @unique
+  transaksiId       String
+  transaksi         Transaksi @relation(fields: [transaksiId], references: [id], onDelete: Cascade)
+  grossAmount       Int
+  paymentType       String?
+  transactionStatus String
+  fraudStatus       String?
+  transactionTime   DateTime?
+  settlementTime    DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([transactionId])
+  @@index([transaksiId])
+  @@map("midtrans_transaction")
 }

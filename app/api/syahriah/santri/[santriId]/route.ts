@@ -32,6 +32,17 @@ export async function GET(
         santriId,
         jenis: "SYAHRIAH",
       },
+      include: {
+        midtransTransactions: {
+          where: {
+            transactionStatus: {
+              in: ["pending", "authorize", "settlement", "capture"],
+            },
+          },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
+      },
       orderBy: { createdAt: "desc" },
     })
 

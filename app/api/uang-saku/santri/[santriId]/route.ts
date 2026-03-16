@@ -46,6 +46,17 @@ export async function GET(
     // Get all UANG_SAKU transactions for this santri
     const uangSakuTransactions = await prisma.transaksi.findMany({
       where,
+      include: {
+        midtransTransactions: {
+          where: {
+            transactionStatus: {
+              in: ["pending", "authorize", "settlement", "capture"],
+            },
+          },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
+      },
       orderBy: { createdAt: "desc" },
     })
 
